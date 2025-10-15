@@ -1,0 +1,1197 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>待办事项管理 | TaskFlow</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#3B82F6',
+                        secondary: '#60A5FA',
+                        accent: '#EF4444',
+                        success: '#10B981',
+                        warning: '#F59E0B',
+                        info: '#3B82F6',
+                        dark: '#1E293B',
+                        light: '#F8FAFC'
+                    },
+                    fontFamily: {
+                        inter: ['Inter', 'system-ui', 'sans-serif'],
+                    },
+                    boxShadow: {
+                        'card': '0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03)',
+                        'card-hover': '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+                        'elevated': '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+                    }
+                }
+            }
+        }
+    </script>
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .content-auto {
+                content-visibility: auto;
+            }
+            .task-complete {
+                @apply line-through text-gray-400;
+            }
+            .gradient-bg {
+                background: linear-gradient(135deg, #EFF6FF 0%, #FFFFFF 100%);
+            }
+            .gradient-primary {
+                background: linear-gradient(135deg, #3B82F6 0%, #60A5FA 100%);
+            }
+            .priority-high {
+                @apply border-l-4 border-accent;
+            }
+            .priority-medium {
+                @apply border-l-4 border-warning;
+            }
+            .priority-low {
+                @apply border-l-4 border-info;
+            }
+            .priority-none {
+                @apply border-l-4 border-gray-300;
+            }
+            .slide-in {
+                animation: slideIn 0.3s ease-out forwards;
+            }
+            .fade-in {
+                animation: fadeIn 0.3s ease-out forwards;
+            }
+            .scale-in {
+                animation: scaleIn 0.2s ease-out forwards;
+            }
+            .pulse-subtle {
+                animation: pulseSubtle 2s infinite;
+            }
+        }
+
+        @keyframes slideIn {
+            from { transform: translateY(10px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        @keyframes scaleIn {
+            from { transform: scale(0.95); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+        
+        @keyframes pulseSubtle {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.02); }
+        }
+    </style>
+</head>
+<body class="font-inter min-h-screen gradient-bg text-dark antialiased">
+    <!-- 顶部通知条 -->
+    <div id="toastNotification" class="fixed top-0 left-0 right-0 py-3 px-4 text-center text-white transform -translate-y-full opacity-0 transition-all duration-300 z-50"></div>
+
+    <!-- 确认操作面板 -->
+    <div id="confirmOverlay" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
+        <div class="bg-white rounded-xl shadow-elevated max-w-md w-full p-6 transform transition-all scale-95 opacity-0" id="confirmDialog">
+            <h3 id="confirmTitle" class="text-lg font-semibold text-gray-800 mb-2"></h3>
+            <p id="confirmMessage" class="text-gray-600 mb-6"></p>
+            <div class="flex justify-end space-x-3">
+                <button id="confirmCancel" class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors">
+                    取消
+                </button>
+                <button id="confirmOk" class="px-4 py-2 bg-accent text-white rounded-lg hover:bg-accent/90 transition-colors">
+                    确认
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <header class="w-full py-6 px-4 md:px-8 bg-white/90 backdrop-blur-sm shadow-sm transition-all duration-300 sticky top-0 z-10">
+        <div class="max-w-6xl mx-auto">
+            <h1 class="text-[clamp(1.75rem,3vw,2.5rem)] font-bold text-gray-800 flex items-center">
+                <i class="fa fa-check-square-o mr-3 text-primary text-3xl"></i>
+                <span>TaskFlow</span>
+                <span class="ml-2 text-sm font-normal text-gray-500 hidden sm:inline-block">高效待办事项管理</span>
+            </h1>
+        </div>
+    </header>
+
+    <main class="flex-grow w-full px-4 md:px-8 py-8">
+        <div class="max-w-6xl mx-auto bg-white rounded-xl shadow-card overflow-hidden transition-all duration-300 hover:shadow-card-hover">
+            <!-- 导航标签 -->
+            <div class="flex border-b">
+                <button id="navTasks" class="nav-tab px-6 py-4 font-medium text-primary border-b-2 border-primary transition-all duration-200">
+                    <i class="fa fa-list-ul mr-2"></i>任务管理
+                </button>
+                <button id="navTrash" class="nav-tab px-6 py-4 font-medium text-gray-500 hover:text-gray-700 transition-all duration-200">
+                    <i class="fa fa-trash mr-2"></i>回收站
+                </button>
+            </div>
+
+            <!-- 任务管理区域 -->
+            <div id="tasksSection" class="flex flex-col md:flex-row">
+                <!-- 左侧：添加/编辑任务区域 -->
+                <div class="p-6 md:p-8 border-b md:border-b-0 md:border-r border-gray-100 w-full md:w-1/3 bg-gray-50">
+                    <h2 id="formTitle" class="text-xl font-semibold text-gray-700 mb-6 flex items-center">
+                        <i class="fa fa-plus-circle text-primary mr-2"></i>添加新任务
+                    </h2>
+                    <form id="taskForm" class="space-y-5">
+                        <input type="hidden" id="taskId">
+                        <div>
+                            <label for="taskTitle" class="block text-sm font-medium text-gray-700 mb-1">任务标题 <span class="text-accent">*</span></label>
+                            <input type="text" id="taskTitle" 
+                                class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all duration-200"
+                                placeholder="输入任务标题..." required>
+                        </div>
+                        <div>
+                            <label for="taskDescription" class="block text-sm font-medium text-gray-700 mb-1">任务描述</label>
+                            <textarea id="taskDescription" rows="3" 
+                                class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all duration-200"
+                                placeholder="输入任务描述..."></textarea>
+                        </div>
+                        <!-- 优先级选择 -->
+                        <div>
+                            <label for="taskPriority" class="block text-sm font-medium text-gray-700 mb-1">优先级</label>
+                            <select id="taskPriority" 
+                                class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all duration-200 bg-white">
+                                <option value="none">无</option>
+                                <option value="low">低</option>
+                                <option value="medium">中</option>
+                                <option value="high">高</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="taskDueDateTime" class="block text-sm font-medium text-gray-700 mb-1">截止日期时间 <span class="text-accent">*</span></label>
+                            <input type="datetime-local" id="taskDueDateTime" 
+                                class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all duration-200"
+                                required>
+                            <p id="dateError" class="text-accent text-sm mt-1 hidden">截止日期时间不能早于当前时间</p>
+                        </div>
+                        <div class="flex space-x-3 pt-2">
+                            <button type="button" id="submitTaskButton"
+                                class="flex-1 gradient-primary hover:opacity-95 text-white font-medium py-2.5 px-4 rounded-lg transition-all duration-200 transform hover:scale-[1.02] flex items-center justify-center shadow-sm">
+                                <i class="fa fa-plus mr-2"></i>添加任务
+                            </button>
+                            <button type="button" id="cancelEditButton" class="hidden px-4 py-2.5 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100 transition-all duration-200">
+                                <i class="fa fa-times"></i>
+                            </button>
+                        </div>
+                    </form>
+
+                    <!-- 快速统计卡片 -->
+                    <div class="mt-8 bg-white rounded-xl shadow-sm p-5 border border-gray-100 slide-in">
+                        <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">任务概览</h3>
+                        <div class="space-y-5">
+                            <div>
+                                <div class="flex justify-between text-sm mb-1.5">
+                                    <span class="text-gray-600">完成进度</span>
+                                    <span id="completionRate" class="font-medium">0%</span>
+                                </div>
+                                <div class="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
+                                    <div id="progressBar" class="bg-primary h-2.5 rounded-full transition-all duration-1000 ease-out" style="width: 0%"></div>
+                                </div>
+                            </div>
+                            <!-- 按优先级统计 -->
+                            <div>
+                                <p class="text-xs text-gray-500 mb-2.5">按优先级分布</p>
+                                <div class="space-y-2.5">
+                                    <div class="flex items-center">
+                                        <span class="w-2.5 h-2.5 rounded-full bg-accent mr-2"></span>
+                                        <span class="text-xs text-gray-600 flex-1">高优先级</span>
+                                        <span id="highPriorityCount" class="text-xs font-medium">0</span>
+                                    </div>
+                                    <div class="flex items-center">
+                                        <span class="w-2.5 h-2.5 rounded-full bg-warning mr-2"></span>
+                                        <span class="text-xs text-gray-600 flex-1">中优先级</span>
+                                        <span id="mediumPriorityCount" class="text-xs font-medium">0</span>
+                                    </div>
+                                    <div class="flex items-center">
+                                        <span class="w-2.5 h-2.5 rounded-full bg-info mr-2"></span>
+                                        <span class="text-xs text-gray-600 flex-1">低优先级</span>
+                                        <span id="lowPriorityCount" class="text-xs font-medium">0</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 右侧：任务列表区域 -->
+                <div class="p-6 md:p-8 w-full md:w-2/3">
+                    <div class="mb-6">
+                        <h2 class="text-xl font-semibold text-gray-700 flex items-center mb-4">
+                            <i class="fa fa-tasks text-primary mr-2"></i>任务列表
+                        </h2>
+                        
+                        <!-- 搜索框 -->
+                        <div class="relative mb-4">
+                            <input type="text" id="searchInput" 
+                                class="pl-9 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all duration-200 w-full"
+                                placeholder="搜索任务标题或描述...">
+                            <i class="fa fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                        </div>
+                        
+                        <!-- 过滤按钮 -->
+                        <div class="flex flex-wrap gap-2">
+                            <button id="filterAll" class="filter-btn px-3.5 py-1.5 rounded-md text-sm bg-primary text-white shadow-sm">全部</button>
+                            <button id="filterActive" class="filter-btn px-3.5 py-1.5 rounded-md text-sm bg-gray-100 hover:bg-gray-200 transition-colors">未完成</button>
+                            <button id="filterCompleted" class="filter-btn px-3.5 py-1.5 rounded-md text-sm bg-gray-100 hover:bg-gray-200 transition-colors">已完成</button>
+                            <button id="clearCompleted" class="px-3.5 py-1.5 rounded-md text-sm text-gray-600 bg-gray-100 hover:bg-gray-200 transition-colors ml-auto">
+                                <i class="fa fa-trash-o mr-1"></i>清空已完成
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 任务列表 -->
+                    <div id="taskList" class="space-y-3 max-h-[calc(100vh-350px)] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-gray-200 scrollbar-track-transparent">
+                        <!-- 任务项会通过JavaScript动态添加 -->
+                        <div class="text-center text-gray-400 py-10" id="emptyTaskList">
+                            <i class="fa fa-inbox text-4xl mb-3 block text-gray-300"></i>
+                            <p>暂无任务，请添加新任务</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 回收站区域 -->
+            <div id="trashSection" class="p-6 md:p-8 hidden">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-xl font-semibold text-gray-700 flex items-center">
+                        <i class="fa fa-trash text-accent mr-2"></i>回收站
+                    </h2>
+                    <button id="emptyTrash" class="px-4 py-2 rounded-md text-sm text-gray-700 bg-gray-100 hover:bg-gray-200 transition-colors">
+                        <i class="fa fa-fire mr-1"></i>清空回收站
+                    </button>
+                </div>
+
+                <!-- 回收站说明 -->
+                <div class="bg-amber-50 border-l-4 border-amber-400 p-4 mb-6 rounded">
+                    <div class="flex">
+                        <div class="flex-shrink-0">
+                            <i class="fa fa-info-circle text-amber-500"></i>
+                        </div>
+                        <div class="ml-3">
+                            <p class="text-sm text-amber-700">
+                                已删除的任务将在回收站中保留30天，超过期限将被永久删除。
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 回收站列表 -->
+                <div id="trashList" class="space-y-3 max-h-[calc(100vh-300px)] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-gray-200 scrollbar-track-transparent">
+                    <!-- 回收站项会通过JavaScript动态添加 -->
+                    <div class="text-center text-gray-400 py-10" id="emptyTrashList">
+                        <i class="fa fa-trash-o text-4xl mb-3 block text-gray-300"></i>
+                        <p>回收站是空的</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="w-full py-4 px-4 md:px-8 bg-white/90 backdrop-blur-sm shadow-inner mt-8">
+        <div class="max-w-6xl mx-auto text-center text-sm text-gray-500">
+            <p>© 2023 TaskFlow | 高效管理您的待办事项</p>
+        </div>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // 任务数据存储
+            let tasks = JSON.parse(localStorage.getItem('tasks')) || [];
+            let trash = JSON.parse(localStorage.getItem('trash')) || [];
+            let currentFilter = 'all';
+            let editingTaskId = null;
+            let confirmCallback = null;
+            let searchQuery = '';
+            
+            // 为现有任务添加优先级属性（如果没有）
+            tasks = tasks.map(task => {
+                if (!task.hasOwnProperty('priority')) {
+                    return { ...task, priority: 'none' };
+                }
+                return task;
+            });
+            
+            // 为回收站任务添加优先级属性
+            trash = trash.map(item => {
+                if (!item.hasOwnProperty('priority')) {
+                    return { ...item, priority: 'none' };
+                }
+                return item;
+            });
+            
+            saveData(); // 保存更新后的数据
+
+            // DOM元素缓存
+            const elements = {
+                taskForm: document.getElementById('taskForm'),
+                taskList: document.getElementById('taskList'),
+                trashList: document.getElementById('trashList'),
+                emptyTaskList: document.getElementById('emptyTaskList'),
+                emptyTrashList: document.getElementById('emptyTrashList'),
+                completionRate: document.getElementById('completionRate'),
+                progressBar: document.getElementById('progressBar'),
+                highPriorityCount: document.getElementById('highPriorityCount'),
+                mediumPriorityCount: document.getElementById('mediumPriorityCount'),
+                lowPriorityCount: document.getElementById('lowPriorityCount'),
+                filterButtons: document.querySelectorAll('.filter-btn'),
+                submitTaskButton: document.getElementById('submitTaskButton'),
+                cancelEditButton: document.getElementById('cancelEditButton'),
+                formTitle: document.getElementById('formTitle'),
+                taskDueDateTime: document.getElementById('taskDueDateTime'),
+                dateError: document.getElementById('dateError'),
+                navTasks: document.getElementById('navTasks'),
+                navTrash: document.getElementById('navTrash'),
+                tasksSection: document.getElementById('tasksSection'),
+                trashSection: document.getElementById('trashSection'),
+                clearCompleted: document.getElementById('clearCompleted'),
+                emptyTrash: document.getElementById('emptyTrash'),
+                toastNotification: document.getElementById('toastNotification'),
+                confirmOverlay: document.getElementById('confirmOverlay'),
+                confirmDialog: document.getElementById('confirmDialog'),
+                confirmTitle: document.getElementById('confirmTitle'),
+                confirmMessage: document.getElementById('confirmMessage'),
+                confirmOk: document.getElementById('confirmOk'),
+                confirmCancel: document.getElementById('confirmCancel'),
+                taskTitleInput: document.getElementById('taskTitle'),
+                taskDescription: document.getElementById('taskDescription'),
+                taskPriority: document.getElementById('taskPriority'),
+                taskId: document.getElementById('taskId'),
+                searchInput: document.getElementById('searchInput')
+            };
+
+            // 初始化应用
+            function initApp() {
+                // 清理超过30天的回收站项目
+                cleanupOldTrashItems();
+                
+                // 设置默认截止日期时间为当前时间加30分钟，并设置最小值为当前时间
+                const now = new Date();
+                const defaultDueDate = new Date(now);
+                defaultDueDate.setMinutes(now.getMinutes() + 30);
+                elements.taskDueDateTime.value = formatDateTimeForInput(defaultDueDate);
+                elements.taskDueDateTime.min = formatDateTimeForInput(now);
+                
+                // 渲染界面
+                renderTasks();
+                renderTrash();
+                updateTaskStats();
+                
+                // 绑定事件处理程序
+                bindEvents();
+                
+                // 设置定时器，每分钟更新一次剩余时间显示
+                setInterval(updateRemainingTimes, 60000);
+            }
+
+            // 绑定所有事件处理程序
+            function bindEvents() {
+                // 过滤按钮事件
+                document.getElementById('filterAll').addEventListener('click', () => setFilter('all'));
+                document.getElementById('filterActive').addEventListener('click', () => setFilter('active'));
+                document.getElementById('filterCompleted').addEventListener('click', () => setFilter('completed'));
+                
+                // 提交任务按钮
+                elements.submitTaskButton.addEventListener('click', function() {
+                    if (editingTaskId) {
+                        updateTask();
+                    } else {
+                        addTask();
+                    }
+                });
+                
+                // 取消编辑按钮
+                elements.cancelEditButton.addEventListener('click', cancelEdit);
+                
+                // 导航标签切换
+                elements.navTasks.addEventListener('click', () => showSection('tasks'));
+                elements.navTrash.addEventListener('click', () => showSection('trash'));
+                
+                // 清空已完成按钮
+                elements.clearCompleted.addEventListener('click', handleClearCompleted);
+                
+                // 清空回收站按钮
+                elements.emptyTrash.addEventListener('click', handleEmptyTrash);
+                
+                // 日期验证
+                elements.taskDueDateTime.addEventListener('change', validateDueDate);
+                
+                // 搜索功能
+                elements.searchInput.addEventListener('input', function(e) {
+                    searchQuery = e.target.value.trim().toLowerCase();
+                    renderTasks();
+                });
+                
+                // 按Enter键提交表单
+                elements.taskForm.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        if (editingTaskId) {
+                            updateTask();
+                        } else {
+                            addTask();
+                        }
+                    }
+                });
+                
+                // 确认对话框事件
+                elements.confirmOk.addEventListener('click', function() {
+                    hideConfirmDialog();
+                    if (typeof confirmCallback === 'function') {
+                        confirmCallback(true);
+                    }
+                });
+                
+                elements.confirmCancel.addEventListener('click', function() {
+                    hideConfirmDialog();
+                    if (typeof confirmCallback === 'function') {
+                        confirmCallback(false);
+                    }
+                });
+            }
+
+            // 显示顶部通知
+            function showToast(message, type = 'info') {
+                const toast = elements.toastNotification;
+                toast.textContent = message;
+                
+                // 设置通知样式
+                toast.className = 'fixed top-0 left-0 right-0 py-3 px-4 text-center text-white transform -translate-y-full opacity-0 transition-all duration-300 z-50';
+                
+                if (type === 'success') {
+                    toast.classList.add('bg-success');
+                } else if (type === 'error') {
+                    toast.classList.add('bg-accent');
+                } else {
+                    toast.classList.add('bg-primary');
+                }
+                
+                // 显示通知
+                setTimeout(() => {
+                    toast.classList.remove('-translate-y-full', 'opacity-0');
+                }, 10);
+                
+                // 3秒后隐藏
+                setTimeout(() => {
+                    toast.classList.add('-translate-y-full', 'opacity-0');
+                }, 3000);
+            }
+
+            // 显示确认对话框
+            function showConfirmDialog(title, message, callback) {
+                elements.confirmTitle.textContent = title;
+                elements.confirmMessage.textContent = message;
+                confirmCallback = callback;
+                
+                elements.confirmOverlay.classList.remove('hidden');
+                elements.confirmOverlay.classList.add('flex');
+                
+                // 添加动画效果
+                setTimeout(() => {
+                    elements.confirmDialog.classList.remove('scale-95', 'opacity-0');
+                    elements.confirmDialog.classList.add('scale-100', 'opacity-100');
+                }, 10);
+            }
+
+            // 隐藏确认对话框
+            function hideConfirmDialog() {
+                elements.confirmDialog.classList.remove('scale-100', 'opacity-100');
+                elements.confirmDialog.classList.add('scale-95', 'opacity-0');
+                
+                setTimeout(() => {
+                    elements.confirmOverlay.classList.add('hidden');
+                    elements.confirmOverlay.classList.remove('flex');
+                    confirmCallback = null;
+                }, 300);
+            }
+
+            // 显示指定区域
+            function showSection(section) {
+                if (section === 'tasks') {
+                    elements.tasksSection.classList.remove('hidden');
+                    elements.trashSection.classList.add('hidden');
+                    elements.navTasks.classList.add('text-primary', 'border-b-2', 'border-primary');
+                    elements.navTasks.classList.remove('text-gray-500', 'hover:text-gray-700');
+                    elements.navTrash.classList.remove('text-primary', 'border-b-2', 'border-primary');
+                    elements.navTrash.classList.add('text-gray-500', 'hover:text-gray-700');
+                } else {
+                    elements.tasksSection.classList.add('hidden');
+                    elements.trashSection.classList.remove('hidden');
+                    elements.navTrash.classList.add('text-primary', 'border-b-2', 'border-primary');
+                    elements.navTrash.classList.remove('text-gray-500', 'hover:text-gray-700');
+                    elements.navTasks.classList.remove('text-primary', 'border-b-2', 'border-primary');
+                    elements.navTasks.classList.add('text-gray-500', 'hover:text-gray-700');
+                }
+            }
+
+            // 清理旧的回收站项目
+            function cleanupOldTrashItems() {
+                const thirtyDaysAgo = new Date();
+                thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+                
+                const oldItemsCount = trash.filter(item => new Date(item.deletedAt) < thirtyDaysAgo).length;
+                
+                trash = trash.filter(item => new Date(item.deletedAt) >= thirtyDaysAgo);
+                
+                if (oldItemsCount > 0) {
+                    saveData();
+                    renderTrash();
+                    showToast(`已自动清理 ${oldItemsCount} 个超过30天的回收站项目`, 'info');
+                }
+            }
+
+            // 验证截止日期
+            function validateDueDate() {
+                const dueDate = new Date(elements.taskDueDateTime.value);
+                const now = new Date();
+                now.setSeconds(0, 0);
+                dueDate.setSeconds(0, 0);
+                
+                if (dueDate < now) {
+                    elements.taskDueDateTime.classList.add('border-accent', 'focus:ring-accent/50', 'focus:border-accent');
+                    elements.dateError.classList.remove('hidden');
+                    return false;
+                } else {
+                    elements.taskDueDateTime.classList.remove('border-accent', 'focus:ring-accent/50', 'focus:border-accent');
+                    elements.dateError.classList.add('hidden');
+                    return true;
+                }
+            }
+
+            // 设置过滤器
+            function setFilter(filter) {
+                currentFilter = filter;
+                elements.filterButtons.forEach(btn => {
+                    btn.classList.remove('bg-primary', 'text-white', 'shadow-sm');
+                    btn.classList.add('bg-gray-100', 'hover:bg-gray-200');
+                });
+                
+                const activeBtn = document.getElementById(`filter${filter.charAt(0).toUpperCase() + filter.slice(1)}`);
+                activeBtn.classList.remove('bg-gray-100', 'hover:bg-gray-200');
+                activeBtn.classList.add('bg-primary', 'text-white', 'shadow-sm');
+                
+                renderTasks();
+            }
+
+            // 添加新任务
+            function addTask() {
+                const title = elements.taskTitleInput.value.trim();
+                const description = elements.taskDescription.value.trim();
+                const dueDateTime = elements.taskDueDateTime.value;
+                const priority = elements.taskPriority.value;
+                
+                if (!title) {
+                    elements.taskTitleInput.classList.add('border-accent', 'focus:ring-accent/50', 'focus:border-accent');
+                    setTimeout(() => {
+                        elements.taskTitleInput.classList.remove('border-accent', 'focus:ring-accent/50', 'focus:border-accent');
+                    }, 2000);
+                    return;
+                }
+                
+                if (!validateDueDate()) {
+                    return;
+                }
+                
+                const newTask = {
+                    id: Date.now().toString(),
+                    title,
+                    description,
+                    priority,
+                    dueDateTime,
+                    completed: false,
+                    createdAt: new Date().toISOString()
+                };
+                
+                tasks.unshift(newTask);
+                saveData();
+                renderTasks();
+                updateTaskStats();
+                
+                // 重置表单
+                elements.taskForm.reset();
+                const defaultDueDate = new Date();
+                defaultDueDate.setMinutes(defaultDueDate.getMinutes() + 30);
+                elements.taskDueDateTime.value = formatDateTimeForInput(defaultDueDate);
+                elements.taskPriority.value = 'none';
+                
+                showToast('任务添加成功', 'success');
+            }
+
+            // 编辑任务
+            function editTask(taskId) {
+                const task = tasks.find(task => task.id === taskId);
+                if (!task) return;
+                
+                editingTaskId = taskId;
+                
+                // 填充表单
+                elements.taskId.value = task.id;
+                elements.taskTitleInput.value = task.title;
+                elements.taskDescription.value = task.description;
+                elements.taskPriority.value = task.priority || 'none';
+                elements.taskDueDateTime.value = formatDateTimeForInput(new Date(task.dueDateTime));
+                
+                // 更改表单状态
+                elements.formTitle.innerHTML = '<i class="fa fa-pencil text-primary mr-2"></i>编辑任务';
+                elements.submitTaskButton.innerHTML = '<i class="fa fa-save mr-2"></i>保存任务';
+                elements.cancelEditButton.classList.remove('hidden');
+                
+                // 滚动到表单
+                if (window.innerWidth < 768) {
+                    elements.formTitle.scrollIntoView({ behavior: 'smooth' });
+                }
+            }
+
+            // 更新任务
+            function updateTask() {
+                const taskId = elements.taskId.value;
+                const title = elements.taskTitleInput.value.trim();
+                const description = elements.taskDescription.value.trim();
+                const dueDateTime = elements.taskDueDateTime.value;
+                const priority = elements.taskPriority.value;
+                
+                if (!title || !taskId) {
+                    if (!title) {
+                        elements.taskTitleInput.classList.add('border-accent', 'focus:ring-accent/50', 'focus:border-accent');
+                        setTimeout(() => {
+                            elements.taskTitleInput.classList.remove('border-accent', 'focus:ring-accent/50', 'focus:border-accent');
+                        }, 2000);
+                    }
+                    return;
+                }
+                
+                if (!validateDueDate()) {
+                    return;
+                }
+                
+                // 更新任务
+                tasks = tasks.map(task => {
+                    if (task.id === taskId) {
+                        return { ...task, title, description, priority, dueDateTime };
+                    }
+                    return task;
+                });
+                
+                saveData();
+                renderTasks();
+                updateTaskStats();
+                cancelEdit();
+                
+                showToast('任务更新成功', 'success');
+            }
+
+            // 取消编辑
+            function cancelEdit() {
+                editingTaskId = null;
+                elements.taskForm.reset();
+                
+                // 重置日期和优先级
+                const defaultDueDate = new Date();
+                defaultDueDate.setMinutes(defaultDueDate.getMinutes() + 30);
+                elements.taskDueDateTime.value = formatDateTimeForInput(defaultDueDate);
+                elements.taskPriority.value = 'none';
+                
+                // 恢复表单状态
+                elements.formTitle.innerHTML = '<i class="fa fa-plus-circle text-primary mr-2"></i>添加新任务';
+                elements.submitTaskButton.innerHTML = '<i class="fa fa-plus mr-2"></i>添加任务';
+                elements.cancelEditButton.classList.add('hidden');
+            }
+
+            // 切换任务完成状态
+            function toggleTaskStatus(taskId) {
+                tasks = tasks.map(task => {
+                    if (task.id === taskId) {
+                        const updatedTask = { ...task, completed: !task.completed };
+                        showToast(updatedTask.completed ? '任务已标记为完成' : '任务已标记为未完成', 'success');
+                        return updatedTask;
+                    }
+                    return task;
+                });
+                
+                saveData();
+                renderTasks();
+                updateTaskStats();
+            }
+
+            // 删除任务（移至回收站）
+            function deleteTask(taskId) {
+                showConfirmDialog(
+                    '确认删除',
+                    '确定要将此任务移至回收站吗？',
+                    (confirmed) => {
+                        if (confirmed) {
+                            const taskIndex = tasks.findIndex(task => task.id === taskId);
+                            if (taskIndex === -1) return;
+                            
+                            // 将任务移至回收站
+                            const [task] = tasks.splice(taskIndex, 1);
+                            trash.push({
+                                ...task,
+                                deletedAt: new Date().toISOString()
+                            });
+                            
+                            saveData();
+                            renderTasks();
+                            renderTrash();
+                            updateTaskStats();
+                            
+                            showToast('任务已移至回收站', 'info');
+                        }
+                    }
+                );
+            }
+
+            // 从回收站恢复任务
+            function restoreFromTrash(taskId) {
+                const trashIndex = trash.findIndex(item => item.id === taskId);
+                if (trashIndex === -1) return;
+                
+                // 从回收站移除
+                const [item] = trash.splice(trashIndex, 1);
+                const { deletedAt, ...taskToRestore } = item;
+                
+                // 恢复到任务列表
+                tasks.unshift(taskToRestore);
+                
+                saveData();
+                renderTasks();
+                renderTrash();
+                updateTaskStats();
+                
+                showToast('任务已恢复', 'success');
+            }
+
+            // 永久删除回收站项目
+            function permanentlyDelete(taskId) {
+                showConfirmDialog(
+                    '永久删除',
+                    '确定要永久删除此任务吗？此操作无法撤销。',
+                    (confirmed) => {
+                        if (confirmed) {
+                            trash = trash.filter(item => item.id !== taskId);
+                            saveData();
+                            renderTrash();
+                            showToast('任务已永久删除', 'info');
+                        }
+                    }
+                );
+            }
+
+            // 处理清空已完成任务
+            function handleClearCompleted() {
+                const completedCount = tasks.filter(task => task.completed).length;
+                if (completedCount === 0) {
+                    showToast('没有已完成的任务可清空', 'info');
+                    return;
+                }
+                
+                showConfirmDialog(
+                    '清空已完成任务',
+                    `确定要删除所有${completedCount}个已完成的任务吗？它们将被移至回收站。`,
+                    (confirmed) => {
+                        if (confirmed) {
+                            // 将已完成任务移至回收站
+                            const completedTasks = tasks.filter(task => task.completed);
+                            const tasksToTrash = completedTasks.map(task => ({
+                                ...task,
+                                deletedAt: new Date().toISOString()
+                            }));
+                            
+                            trash = [...trash, ...tasksToTrash];
+                            tasks = tasks.filter(task => !task.completed);
+                            
+                            saveData();
+                            renderTasks();
+                            renderTrash();
+                            updateTaskStats();
+                            showToast('已完成任务已移至回收站', 'success');
+                        }
+                    }
+                );
+            }
+
+            // 处理清空回收站
+            function handleEmptyTrash() {
+                if (trash.length === 0) {
+                    showToast('回收站已经是空的', 'info');
+                    return;
+                }
+                
+                showConfirmDialog(
+                    '清空回收站',
+                    `确定要永久删除回收站中的所有${trash.length}个项目吗？此操作无法撤销。`,
+                    (confirmed) => {
+                        if (confirmed) {
+                            trash = [];
+                            saveData();
+                            renderTrash();
+                            showToast('回收站已清空', 'success');
+                        }
+                    }
+                );
+            }
+
+            // 格式化日期时间为显示用
+            function formatDateTimeForDisplay(dateString) {
+                if (!dateString) return '无';
+                const date = new Date(dateString);
+                return date.toLocaleString('zh-CN', { 
+                    year: 'numeric', 
+                    month: 'long', 
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+            }
+            
+            // 格式化日期时间为input用
+            function formatDateTimeForInput(date) {
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const day = String(date.getDate()).padStart(2, '0');
+                const hours = String(date.getHours()).padStart(2, '0');
+                const minutes = String(date.getMinutes()).padStart(2, '0');
+                
+                return `${year}-${month}-${day}T${hours}:${minutes}`;
+            }
+
+            // 计算剩余时间
+            function calculateRemainingTime(dueDateTime, completed) {
+                if (completed) return '已完成';
+                
+                const now = new Date();
+                const dueDate = new Date(dueDateTime);
+                const diffTime = dueDate - now;
+                
+                if (diffTime <= 0) {
+                    // 已过期
+                    const days = Math.floor(Math.abs(diffTime) / (1000 * 60 * 60 * 24));
+                    const hours = Math.floor((Math.abs(diffTime) % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                    
+                    if (days > 0) {
+                        return `${days}天${hours}小时前已过期`;
+                    } else {
+                        return `${hours}小时前已过期`;
+                    }
+                } else {
+                    // 剩余时间
+                    const days = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+                    const hours = Math.floor((diffTime % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                    
+                    if (days > 0) {
+                        return `剩余 ${days}天${hours}小时`;
+                    } else {
+                        return `剩余 ${hours}小时`;
+                    }
+                }
+            }
+
+            // 更新所有任务的剩余时间显示
+            function updateRemainingTimes() {
+                document.querySelectorAll('.remaining-time').forEach(el => {
+                    const taskId = el.getAttribute('data-task-id');
+                    const task = tasks.find(t => t.id === taskId);
+                    
+                    if (task) {
+                        const remainingTime = calculateRemainingTime(task.dueDateTime, task.completed);
+                        el.textContent = remainingTime;
+                        
+                        // 更新样式
+                        if (remainingTime.includes('已过期')) {
+                            el.classList.add('text-accent');
+                            el.classList.remove('text-success', 'text-gray-600');
+                        } else if (task.completed) {
+                            el.classList.add('text-success');
+                            el.classList.remove('text-accent', 'text-gray-600');
+                        } else {
+                            el.classList.add('text-gray-600');
+                            el.classList.remove('text-accent', 'text-success');
+                        }
+                    }
+                });
+            }
+
+            // 计算剩余天数（用于回收站）
+            function getDaysRemaining(deletedAt) {
+                const deletedDate = new Date(deletedAt);
+                const expiryDate = new Date(deletedDate);
+                expiryDate.setDate(expiryDate.getDate() + 30);
+                
+                const now = new Date();
+                const diffTime = expiryDate - now;
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                
+                return diffDays > 0 ? diffDays : 0;
+            }
+
+            // 保存数据到本地存储
+            function saveData() {
+                localStorage.setItem('tasks', JSON.stringify(tasks));
+                localStorage.setItem('trash', JSON.stringify(trash));
+            }
+
+            // 更新任务统计
+            function updateTaskStats() {
+                const total = tasks.length;
+                const completed = tasks.filter(task => task.completed).length;
+                const completionRate = total > 0 ? Math.round((completed / total) * 100) : 0;
+                
+                // 更新完成进度
+                elements.completionRate.textContent = `${completionRate}%`;
+                elements.progressBar.style.width = `${completionRate}%`;
+                
+                // 更新优先级统计
+                const highPriority = tasks.filter(task => !task.completed && task.priority === 'high').length;
+                const mediumPriority = tasks.filter(task => !task.completed && task.priority === 'medium').length;
+                const lowPriority = tasks.filter(task => !task.completed && task.priority === 'low').length;
+                
+                elements.highPriorityCount.textContent = highPriority;
+                elements.mediumPriorityCount.textContent = mediumPriority;
+                elements.lowPriorityCount.textContent = lowPriority;
+            }
+
+            // 渲染任务列表
+            function renderTasks() {
+                // 过滤任务
+                let filteredTasks = [...tasks];
+                
+                // 应用搜索过滤
+                if (searchQuery) {
+                    filteredTasks = filteredTasks.filter(task => 
+                        task.title.toLowerCase().includes(searchQuery) || 
+                        (task.description && task.description.toLowerCase().includes(searchQuery))
+                    );
+                }
+                
+                // 应用状态过滤
+                if (currentFilter === 'active') {
+                    filteredTasks = filteredTasks.filter(task => !task.completed);
+                } else if (currentFilter === 'completed') {
+                    filteredTasks = filteredTasks.filter(task => task.completed);
+                }
+                
+                // 按优先级和截止日期排序
+                filteredTasks.sort((a, b) => {
+                    // 优先级排序（高 -> 中 -> 低 -> 无）
+                    const priorityOrder = { 'high': 4, 'medium': 3, 'low': 2, 'none': 1 };
+                    if (priorityOrder[a.priority] !== priorityOrder[b.priority]) {
+                        return priorityOrder[b.priority] - priorityOrder[a.priority];
+                    }
+                    
+                    // 相同优先级按截止日期排序
+                    return new Date(a.dueDateTime) - new Date(b.dueDateTime);
+                });
+                
+                // 清空列表
+                elements.taskList.innerHTML = '';
+                
+                // 检查是否有任务
+                if (filteredTasks.length === 0) {
+                    elements.taskList.appendChild(elements.emptyTaskList);
+                    return;
+                }
+                
+                // 添加任务项
+                filteredTasks.forEach((task, index) => {
+                    const taskElement = document.createElement('div');
+                    
+                    // 计算动画延迟，创建级联效果
+                    const delay = index * 50;
+                    
+                    taskElement.className = `task-item p-4 bg-white rounded-xl shadow-sm transition-all duration-300 hover:shadow-md fade-in`;
+                    taskElement.style.animationDelay = `${delay}ms`;
+                    
+                    // 设置优先级边框
+                    if (task.completed) {
+                        taskElement.classList.add('border-l-4', 'border-success');
+                    } else if (task.priority === 'high') {
+                        taskElement.classList.add('priority-high');
+                    } else if (task.priority === 'medium') {
+                        taskElement.classList.add('priority-medium');
+                    } else if (task.priority === 'low') {
+                        taskElement.classList.add('priority-low');
+                    } else {
+                        taskElement.classList.add('priority-none');
+                    }
+                    
+                    // 计算剩余时间
+                    const remainingTime = calculateRemainingTime(task.dueDateTime, task.completed);
+                    
+                    // 任务项内容
+                    taskElement.innerHTML = `
+                        <div class="flex justify-between items-start">
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-start">
+                                    <input type="checkbox" id="task-${task.id}" ${task.completed ? 'checked' : ''} 
+                                        class="mt-1 h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded cursor-pointer transition-colors">
+                                    <label for="task-${task.id}" class="ml-3 block text-sm font-medium text-gray-700 ${task.completed ? 'task-complete' : ''}">
+                                        ${task.title}
+                                        ${task.priority !== 'none' && !task.completed ? 
+                                            `<span class="ml-2 px-2 py-0.5 text-xs rounded-full font-medium 
+                                                ${task.priority === 'high' ? 'bg-accent bg-opacity-10 text-accent' : 
+                                                  task.priority === 'medium' ? 'bg-warning bg-opacity-10 text-warning' : 
+                                                  'bg-info bg-opacity-10 text-info'}">
+                                                ${task.priority === 'high' ? '高' : task.priority === 'medium' ? '中' : '低'}优先级
+                                            </span>` : ''}
+                                    </label>
+                                </div>
+                                ${task.description ? `
+                                    <p class="mt-1 text-sm text-gray-500 ${task.completed ? 'task-complete' : ''} line-clamp-2">
+                                        ${task.description}
+                                    </p>
+                                ` : ''}
+                                <div class="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
+                                    <span class="flex items-center">
+                                        <i class="fa fa-calendar mr-1 ${task.completed ? 'text-gray-400' : 'text-primary'}"></i>
+                                        截止: ${formatDateTimeForDisplay(task.dueDateTime)}
+                                    </span>
+                                    <span class="flex items-center remaining-time ${remainingTime.includes('已过期') ? 'text-accent' : task.completed ? 'text-success' : 'text-gray-600'}" data-task-id="${task.id}">
+                                        <i class="fa fa-clock-o mr-1"></i>
+                                        ${remainingTime}
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="ml-4 flex-shrink-0 flex space-x-2">
+                                <button class="edit-task-btn text-gray-400 hover:text-primary focus:outline-none transition-colors" data-task-id="${task.id}">
+                                    <span class="sr-only">编辑任务</span>
+                                    <i class="fa fa-pencil text-lg"></i>
+                                </button>
+                                <button class="delete-task-btn text-gray-400 hover:text-accent focus:outline-none transition-colors" data-task-id="${task.id}">
+                                    <span class="sr-only">删除任务</span>
+                                    <i class="fa fa-trash-o text-lg"></i>
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                    
+                    // 添加复选框事件
+                    const checkbox = taskElement.querySelector(`#task-${task.id}`);
+                    checkbox.addEventListener('change', () => toggleTaskStatus(task.id));
+                    
+                    // 添加编辑按钮事件
+                    const editBtn = taskElement.querySelector('.edit-task-btn');
+                    editBtn.addEventListener('click', function() {
+                        const taskId = this.getAttribute('data-task-id');
+                        editTask(taskId);
+                    });
+                    
+                    // 添加删除按钮事件
+                    const deleteBtn = taskElement.querySelector('.delete-task-btn');
+                    deleteBtn.addEventListener('click', function() {
+                        const taskId = this.getAttribute('data-task-id');
+                        deleteTask(taskId);
+                    });
+                    
+                    elements.taskList.appendChild(taskElement);
+                });
+            }
+
+            // 渲染回收站列表
+            function renderTrash() {
+                // 清空列表
+                elements.trashList.innerHTML = '';
+                
+                // 检查回收站是否为空
+                if (trash.length === 0) {
+                    elements.trashList.appendChild(elements.emptyTrashList);
+                    return;
+                }
+                
+                // 按删除时间排序
+                const sortedTrash = [...trash].sort((a, b) => 
+                    new Date(b.deletedAt) - new Date(a.deletedAt)
+                );
+                
+                // 添加回收站项目
+                sortedTrash.forEach((item, index) => {
+                    const daysRemaining = getDaysRemaining(item.deletedAt);
+                    const trashItem = document.createElement('div');
+                    
+                    // 计算动画延迟，创建级联效果
+                    const delay = index * 50;
+                    
+                    trashItem.className = 'p-4 bg-white rounded-xl shadow-sm border-l-4 border-gray-300 transition-all duration-300 hover:shadow-md slide-in';
+                    trashItem.style.animationDelay = `${delay}ms`;
+                    
+                    // 回收站项目内容
+                    trashItem.innerHTML = `
+                        <div class="flex justify-between items-start">
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-start">
+                                    <label class="block text-sm font-medium text-gray-600 ${item.completed ? 'task-complete' : ''}">
+                                        ${item.title}
+                                        ${item.priority !== 'none' ? 
+                                            `<span class="ml-2 px-2 py-0.5 text-xs rounded-full font-medium 
+                                                ${item.priority === 'high' ? 'bg-accent bg-opacity-10 text-accent' : 
+                                                  item.priority === 'medium' ? 'bg-warning bg-opacity-10 text-warning' : 
+                                                  'bg-info bg-opacity-10 text-info'}">
+                                                ${item.priority === 'high' ? '高' : item.priority === 'medium' ? '中' : '低'}优先级
+                                            </span>` : ''}
+                                    </label>
+                                </div>
+                                ${item.description ? `
+                                    <p class="mt-1 text-sm text-gray-500 ${item.completed ? 'task-complete' : ''} line-clamp-2">
+                                        ${item.description}
+                                    </p>
+                                ` : ''}
+                                <div class="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
+                                    <span class="flex items-center text-gray-500">
+                                        <i class="fa fa-calendar mr-1"></i>
+                                        截止: ${formatDateTimeForDisplay(item.dueDateTime)}
+                                    </span>
+                                    <span class="flex items-center text-gray-500">
+                                        <i class="fa fa-trash-o mr-1"></i>
+                                        删除: ${formatDateTimeForDisplay(item.deletedAt)}
+                                    </span>
+                                    <span class="flex items-center ${daysRemaining <= 3 ? 'text-accent pulse-subtle' : 'text-gray-500'}">
+                                        <i class="fa fa-clock-o mr-1"></i>
+                                        ${daysRemaining} 天后永久删除
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="ml-4 flex-shrink-0 flex space-x-2">
+                                <button class="restore-task-btn text-gray-400 hover:text-primary focus:outline-none transition-colors" data-task-id="${item.id}">
+                                    <span class="sr-only">恢复任务</span>
+                                    <i class="fa fa-undo text-lg"></i>
+                                </button>
+                                <button class="permanent-delete-btn text-gray-400 hover:text-accent focus:outline-none transition-colors" data-task-id="${item.id}">
+                                    <span class="sr-only">永久删除</span>
+                                    <i class="fa fa-times text-lg"></i>
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                    
+                    // 添加恢复按钮事件
+                    const restoreBtn = trashItem.querySelector('.restore-task-btn');
+                    restoreBtn.addEventListener('click', function() {
+                        const taskId = this.getAttribute('data-task-id');
+                        restoreFromTrash(taskId);
+                    });
+                    
+                    // 添加永久删除按钮事件
+                    const deleteBtn = trashItem.querySelector('.permanent-delete-btn');
+                    deleteBtn.addEventListener('click', function() {
+                        const taskId = this.getAttribute('data-task-id');
+                        permanentlyDelete(taskId);
+                    });
+                    
+                    elements.trashList.appendChild(trashItem);
+                });
+            }
+
+            // 启动应用
+            initApp();
+        });
+    </script>
+</body>
+</html>
