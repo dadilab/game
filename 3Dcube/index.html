@@ -1,0 +1,2730 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>三视图计数教学平台</title>
+    <meta name="description" content="通过交互式三视图教学，帮助学生掌握立方体计数的核心原理和解题技巧。">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://unpkg.com/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            /* Primary Color Palette - Enhanced Blue Theme */
+            --primary: 200 80% 55%;
+            --primary-hover: 200 80% 48%;
+            --primary-foreground: 0 0% 100%;
+            --primary-light: 200 60% 85%;
+            --primary-dark: 200 80% 35%;
+            
+            /* Secondary & Neutral Tones */
+            --secondary: 210 12% 96%;
+            --secondary-hover: 210 12% 90%;
+            --secondary-foreground: 210 20% 30%;
+            --accent: 190 65% 75%;
+            --accent-foreground: 190 80% 25%;
+            
+            /* Background & Surface */
+            --background: 210 15% 98%;
+            --surface: 0 0% 100%;
+            --surface-elevated: 210 20% 97%;
+            --foreground: 210 25% 15%;
+            
+            /* Muted & Borders */
+            --muted: 210 15% 95%;
+            --muted-foreground: 210 15% 45%;
+            --border: 210 20% 88%;
+            --border-hover: 210 25% 75%;
+            
+            /* Status Colors */
+            --success: 142 65% 46%;
+            --success-foreground: 0 0% 100%;
+            --warning: 45 75% 58%;
+            --warning-foreground: 45 30% 15%;
+            --error: 0 70% 65%;
+            --error-foreground: 0 0% 100%;
+            
+            /* Cube Specific */
+            --cube-wood: 28 65% 65%;
+            --cube-highlight: 200 70% 70%;
+            --cube-shadow: 210 30% 40%;
+            
+            /* Advanced Shadows & Effects */
+            --shadow-sm: 210 25% 25% / 0.06;
+            --shadow-md: 210 25% 25% / 0.10;
+            --shadow-lg: 210 25% 25% / 0.14;
+            --shadow-xl: 210 25% 25% / 0.20;
+            --glow-primary: 200 65% 55% / 0.25;
+            --glow-accent: 190 45% 75% / 0.20;
+            
+            /* Gradients */
+            --gradient-primary: linear-gradient(135deg, hsl(200 80% 55%), hsl(190 65% 75%));
+            --gradient-surface: linear-gradient(145deg, hsl(0 0% 100%), hsl(210 20% 97%));
+            --gradient-hero: linear-gradient(135deg, hsl(200 65% 55% / 0.08), hsl(190 45% 75% / 0.12));
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: var(--gradient-surface);
+            min-height: 100vh;
+            color: hsl(var(--foreground));
+            line-height: 1.6;
+            overflow-x: hidden;
+            position: relative;
+            font-feature-settings: 'kern' 1, 'liga' 1;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        /* Enhanced animated background with fluid motion */
+        .geometric-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            overflow: hidden;
+            background: radial-gradient(ellipse at 30% 20%, hsl(var(--primary) / 0.03), transparent 50%),
+                        radial-gradient(ellipse at 70% 80%, hsl(var(--accent) / 0.02), transparent 50%);
+            opacity: 0.8;
+        }
+
+        .floating-shape {
+            position: absolute;
+            opacity: 0.4;
+            filter: blur(0.2px);
+            will-change: transform;
+        }
+
+        /* Fluid wireframe cubes with enhanced glass effect */
+        .floating-shape.cube {
+            width: 100px;
+            height: 100px;
+            border: 2px solid hsl(var(--primary) / 0.4);
+            background: linear-gradient(135deg, 
+                hsl(var(--primary) / 0.08), 
+                hsl(var(--accent) / 0.12),
+                hsl(var(--primary) / 0.06)
+            );
+            backdrop-filter: blur(12px) saturate(180%);
+            border-radius: 16px;
+            position: relative;
+            animation: float-cube-fluid 25s ease-in-out infinite;
+            box-shadow: 
+                0 8px 32px hsl(var(--glow-primary)),
+                inset 0 1px 0 hsl(var(--primary) / 0.3),
+                0 0 0 1px hsl(var(--primary) / 0.1);
+            transform-style: preserve-3d;
+        }
+
+        .floating-shape.cube::before {
+            content: '';
+            position: absolute;
+            top: -3px;
+            left: -3px;
+            right: -3px;
+            bottom: -3px;
+            border: 1px solid hsl(var(--accent) / 0.2);
+            border-radius: 16px;
+            background: linear-gradient(45deg, 
+                hsl(var(--primary) / 0.05), 
+                transparent, 
+                hsl(var(--accent) / 0.05)
+            );
+        }
+
+        .floating-shape.triangle {
+            width: 0;
+            height: 0;
+            border-left: 40px solid transparent;
+            border-right: 40px solid transparent;
+            border-bottom: 70px solid hsl(var(--primary) / 0.25);
+            filter: drop-shadow(0 8px 20px hsl(var(--glow-primary))) blur(0.5px);
+            animation: float-triangle-fluid 30s ease-in-out infinite;
+            backdrop-filter: blur(8px);
+        }
+
+        .floating-shape.circle {
+            width: 80px;
+            height: 80px;
+            background: radial-gradient(circle at 30% 30%, 
+                hsl(var(--accent) / 0.2), 
+                hsl(var(--accent) / 0.08),
+                hsl(var(--primary) / 0.05)
+            );
+            border: 2px solid hsl(var(--accent) / 0.3);
+            border-radius: 50%;
+            backdrop-filter: blur(16px) saturate(150%);
+            box-shadow: 
+                0 0 40px hsl(var(--glow-accent)),
+                inset 0 2px 4px hsl(var(--accent) / 0.1);
+            animation: float-circle-fluid 35s ease-in-out infinite;
+        }
+
+        .floating-shape.diamond {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, 
+                hsl(var(--primary) / 0.15),
+                hsl(var(--accent) / 0.2),
+                hsl(var(--primary) / 0.1)
+            );
+            transform: rotate(45deg);
+            border-radius: 12px;
+            border: 1px solid hsl(var(--primary) / 0.4);
+            backdrop-filter: blur(10px) saturate(180%);
+            box-shadow: 
+                0 0 30px hsl(var(--glow-primary)),
+                inset 0 1px 0 hsl(var(--primary) / 0.2);
+            animation: float-diamond-fluid 32s ease-in-out infinite;
+        }
+
+        /* Enhanced hexagon with liquid glass */
+        .floating-shape.hexagon {
+            width: 80px;
+            height: 46px;
+            background: linear-gradient(135deg, 
+                hsl(var(--accent-foreground) / 0.18), 
+                hsl(var(--accent-foreground) / 0.12),
+                hsl(var(--primary) / 0.08)
+            );
+            border: 1px solid hsl(var(--accent-foreground) / 0.3);
+            position: relative;
+            backdrop-filter: blur(14px) saturate(160%);
+            animation: float-hexagon-fluid 28s ease-in-out infinite;
+            box-shadow: 0 0 25px hsl(var(--glow-accent));
+        }
+
+        .floating-shape.hexagon:before,
+        .floating-shape.hexagon:after {
+            content: "";
+            position: absolute;
+            width: 0;
+            border-left: 40px solid transparent;
+            border-right: 40px solid transparent;
+            backdrop-filter: blur(14px);
+        }
+
+        .floating-shape.hexagon:before {
+            bottom: 100%;
+            border-bottom: 23px solid hsl(var(--accent-foreground) / 0.18);
+        }
+
+        .floating-shape.hexagon:after {
+            top: 100%;
+            border-top: 23px solid hsl(var(--accent-foreground) / 0.18);
+        }
+
+        /* Enhanced star with liquid glass effect */
+        .floating-shape.star {
+            position: relative;
+            display: inline-block;
+            width: 0;
+            height: 0;
+            border-left: 35px solid transparent;
+            border-right: 35px solid transparent;
+            border-bottom: 25px solid hsl(var(--primary) / 0.25);
+            transform: rotate(35deg);
+            filter: drop-shadow(0 0 25px hsl(var(--glow-primary))) blur(0.3px);
+            animation: float-star-fluid 26s ease-in-out infinite;
+            backdrop-filter: blur(8px);
+        }
+
+        /* New background shapes for richer animation */
+        .floating-shape.ring {
+            width: 90px;
+            height: 90px;
+            border-radius: 50%;
+            border: 3px solid hsl(var(--primary) / 0.25);
+            box-shadow: 0 0 20px hsl(var(--glow-primary));
+            background: radial-gradient(circle, transparent 60%, hsl(var(--primary) / 0.06) 61%);
+            animation: float-circle-fluid 30s ease-in-out infinite;
+            backdrop-filter: blur(8px);
+        }
+        .floating-shape.pill {
+            width: 140px;
+            height: 40px;
+            border-radius: 999px;
+            border: 2px solid hsl(var(--primary) / 0.25);
+            background: linear-gradient(135deg, hsl(var(--primary) / 0.12), hsl(var(--accent) / 0.12));
+            animation: float-diamond-fluid 34s ease-in-out infinite;
+            box-shadow: 0 0 16px hsl(var(--glow-primary));
+            backdrop-filter: blur(10px);
+        }
+        .floating-shape.dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: hsl(var(--primary));
+            box-shadow: 0 0 10px hsl(var(--glow-primary));
+            animation: twinkle var(--twinkle, 2.2s) ease-in-out infinite alternate, float-star-fluid var(--float, 22s) ease-in-out infinite;
+        }
+
+        @keyframes twinkle {
+            0% { transform: scale(0.8); opacity: 0.3; }
+            100% { transform: scale(1.6); opacity: 0.8; }
+        }
+
+        /* Beams sweeping across */
+        .floating-shape.beam {
+            position: absolute;
+            width: 2px;
+            height: 180px;
+            background: linear-gradient(180deg, rgba(0,255,255,0) 0%, rgba(0,255,255,0.5) 30%, rgba(0,255,255,0) 100%);
+            filter: blur(0.3px) drop-shadow(0 0 12px hsl(var(--glow-primary)));
+            transform: rotate(35deg);
+            animation: beam-sweep var(--beam-dur, 18s) linear infinite;
+        }
+        @keyframes beam-sweep {
+            from { transform: translate(-10vw, 110vh) rotate(35deg); opacity: 0; }
+            10% { opacity: 0.6; }
+            to   { transform: translate(110vw, -10vh) rotate(35deg); opacity: 0; }
+        }
+
+        /* Arcs with glow */
+        .floating-shape.arc {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            border: 3px solid transparent;
+            border-top-color: hsl(var(--primary) / 0.35);
+            border-right-color: hsl(var(--primary) / 0.2);
+            filter: drop-shadow(0 0 14px hsl(var(--glow-primary)));
+            animation: arc-wobble 30s ease-in-out infinite;
+        }
+        @keyframes arc-wobble {
+            0%   { transform: translateY(100vh) rotate(0deg) scale(0.7); opacity: 0; }
+            15%  { opacity: 0.3; }
+            50%  { transform: translateY(45vh) rotate(180deg) scale(1.1); }
+            85%  { opacity: 0.3; }
+            100% { transform: translateY(-10vh) rotate(360deg) scale(0.7); opacity: 0; }
+        }
+
+        .floating-shape.star:before {
+            content: '';
+            position: absolute;
+            left: -35px;
+            top: -18px;
+            width: 0;
+            height: 0;
+            border-left: 35px solid transparent;
+            border-right: 35px solid transparent;
+            border-bottom: 25px solid hsl(var(--primary) / 0.25);
+            transform: rotate(-70deg);
+        }
+
+        .floating-shape.star:after {
+            content: '';
+            position: absolute;
+            left: -35px;
+            top: 4px;
+            width: 0;
+            height: 0;
+            border-left: 35px solid transparent;
+            border-right: 35px solid transparent;
+            border-bottom: 25px solid hsl(var(--primary) / 0.25);
+            transform: rotate(70deg);
+        }
+
+        /* Fluid animations with smooth easing */
+        @keyframes float-cube-fluid {
+            0% { 
+                transform: translateY(100vh) translateX(0) rotateX(0deg) rotateY(0deg) rotateZ(0deg) scale(0.8);
+                opacity: 0;
+            }
+            10% {
+                opacity: 0.4;
+            }
+            25% {
+                transform: translateY(75vh) translateX(20px) rotateX(90deg) rotateY(90deg) rotateZ(90deg) scale(1);
+            }
+            50% {
+                transform: translateY(50vh) translateX(-10px) rotateX(180deg) rotateY(180deg) rotateZ(180deg) scale(1.1);
+            }
+            75% {
+                transform: translateY(25vh) translateX(15px) rotateX(270deg) rotateY(270deg) rotateZ(270deg) scale(0.9);
+            }
+            90% {
+                opacity: 0.4;
+            }
+            100% { 
+                transform: translateY(-100px) translateX(0) rotateX(360deg) rotateY(360deg) rotateZ(360deg) scale(0.8);
+                opacity: 0;
+            }
+        }
+
+        @keyframes float-triangle-fluid {
+            0% { 
+                transform: translateY(100vh) translateX(0) rotate(0deg) scale(0.7);
+                opacity: 0;
+            }
+            15% { opacity: 0.25; }
+            25% { 
+                transform: translateY(75vh) translateX(-30px) rotate(60deg) scale(1.2);
+            }
+            50% { 
+                transform: translateY(50vh) translateX(20px) rotate(180deg) scale(1);
+            }
+            75% { 
+                transform: translateY(25vh) translateX(-15px) rotate(300deg) scale(1.1);
+            }
+            85% { opacity: 0.25; }
+            100% { 
+                transform: translateY(-100px) translateX(0) rotate(360deg) scale(0.7);
+                opacity: 0;
+            }
+        }
+
+        @keyframes float-circle-fluid {
+            0% { 
+                transform: translateY(100vh) translateX(0) scale(0.6);
+                opacity: 0;
+            }
+            20% { opacity: 0.4; }
+            30% { 
+                transform: translateY(70vh) translateX(25px) scale(1.3);
+            }
+            60% { 
+                transform: translateY(40vh) translateX(-20px) scale(0.8);
+            }
+            80% { opacity: 0.4; }
+            100% { 
+                transform: translateY(-100px) translateX(0) scale(0.6);
+                opacity: 0;
+            }
+        }
+
+        @keyframes float-diamond-fluid {
+            0% { 
+                transform: translateY(100vh) translateX(0) rotate(45deg) scale(0.5);
+                opacity: 0;
+            }
+            18% { opacity: 0.25; }
+            25% { 
+                transform: translateY(75vh) translateX(-25px) rotate(135deg) scale(1.2);
+            }
+            50% { 
+                transform: translateY(50vh) translateX(30px) rotate(225deg) scale(0.9);
+            }
+            75% { 
+                transform: translateY(25vh) translateX(-10px) rotate(315deg) scale(1.1);
+            }
+            82% { opacity: 0.25; }
+            100% { 
+                transform: translateY(-100px) translateX(0) rotate(405deg) scale(0.5);
+                opacity: 0;
+            }
+        }
+
+        @keyframes float-hexagon-fluid {
+            0% { 
+                transform: translateY(100vh) translateX(0) rotateY(0deg) scale(0.8);
+                opacity: 0;
+            }
+            22% { opacity: 0.18; }
+            40% { 
+                transform: translateY(60vh) translateX(20px) rotateY(120deg) scale(1.1);
+            }
+            70% { 
+                transform: translateY(30vh) translateX(-15px) rotateY(240deg) scale(0.9);
+            }
+            78% { opacity: 0.18; }
+            100% { 
+                transform: translateY(-100px) translateX(0) rotateY(360deg) scale(0.8);
+                opacity: 0;
+            }
+        }
+
+        @keyframes float-star-fluid {
+            0% { 
+                transform: translateY(100vh) translateX(0) rotate(35deg) scale(0.6);
+                opacity: 0;
+            }
+            16% { opacity: 0.25; }
+            33% { 
+                transform: translateY(67vh) translateX(-20px) rotate(155deg) scale(1.3);
+            }
+            66% { 
+                transform: translateY(33vh) translateX(25px) rotate(275deg) scale(0.8);
+            }
+            84% { opacity: 0.25; }
+            100% { 
+                transform: translateY(-100px) translateX(0) rotate(395deg) scale(0.6);
+                opacity: 0;
+            }
+        }
+
+        /* Liquid glass header */
+        .header {
+            background: linear-gradient(135deg, 
+                hsl(var(--surface) / 0.85), 
+                hsl(var(--surface-elevated) / 0.8)
+            );
+            border-bottom: 1px solid hsl(var(--border) / 0.3);
+            padding: 1rem 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            backdrop-filter: blur(32px) saturate(200%);
+            box-shadow: 
+                0 8px 32px hsl(var(--shadow-md)),
+                0 1px 0 hsl(var(--surface) / 0.8),
+                inset 0 1px 0 hsl(var(--surface) / 0.9);
+            border-radius: 0 0 24px 24px;
+            border-left: 1px solid hsl(var(--border) / 0.2);
+            border-right: 1px solid hsl(var(--border) / 0.2);
+            transition: all 0.3s ease;
+        }
+
+        .header:hover {
+            box-shadow: 
+                0 12px 40px hsl(var(--shadow-lg)),
+                0 0 0 1px hsl(var(--primary) / 0.1),
+                inset 0 1px 0 hsl(var(--surface));
+        }
+
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: hsl(var(--primary));
+            text-decoration: none;
+            transition: transform 0.2s ease;
+        }
+
+        .logo:hover {
+            transform: scale(1.05);
+        }
+
+        .logo-icon {
+            width: 32px;
+            height: 32px;
+            background: hsl(var(--primary));
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 800;
+            font-size: 1.2rem;
+            box-shadow: 0 4px 12px hsl(var(--glow-primary));
+        }
+
+        .nav {
+            display: flex;
+            gap: 2rem;
+            align-items: center;
+        }
+
+        .nav-item {
+            color: hsl(var(--muted-foreground));
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            position: relative;
+        }
+
+        .nav-item::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 50%;
+            width: 0;
+            height: 2px;
+            background: hsl(var(--primary));
+            transition: all 0.3s ease;
+            transform: translateX(-50%);
+        }
+
+        .nav-item:hover,
+        .nav-item.active {
+            color: hsl(var(--primary));
+            background: hsl(var(--secondary));
+        }
+
+        .nav-item:hover::after,
+        .nav-item.active::after {
+            width: 80%;
+        }
+
+        .user-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: hsl(var(--primary));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+            box-shadow: 0 4px 12px hsl(var(--glow-primary));
+        }
+
+        .user-avatar:hover {
+            transform: scale(1.1);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        /* Page styles */
+        .page {
+            display: none;
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        .page.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Liquid glass hero section */
+        .hero {
+            text-align: center;
+            padding: 6rem 3rem;
+            /* Frosted glass banner area */
+            background: linear-gradient(135deg,
+                hsl(var(--surface) / 0.35),
+                hsl(var(--surface-elevated) / 0.32),
+                hsl(var(--primary) / 0.06)
+            );
+            border-radius: 40px;
+            margin-bottom: 4rem;
+            position: relative;
+            overflow: hidden;
+            border: 1px solid hsl(var(--border) / 0.35);
+            backdrop-filter: blur(36px) saturate(220%);
+            -webkit-backdrop-filter: blur(36px) saturate(220%);
+            box-shadow: 
+                0 40px 80px hsl(var(--shadow-lg)),
+                0 0 0 1px hsl(var(--primary) / 0.08),
+                inset 0 1px 0 hsl(var(--surface) / 0.9);
+            transition: all 0.5s ease;
+        }
+
+        /* Frosted glass title (毛玻璃质感) */
+        .glass-title {
+            display: inline-block;
+            padding: 0.75rem 1.25rem;
+            border-radius: 16px;
+            background: linear-gradient(145deg,
+                hsl(var(--surface) / 0.55),
+                hsl(var(--surface-elevated) / 0.45)
+            );
+            border: 1px solid hsl(var(--border) / 0.35);
+            backdrop-filter: blur(12px) saturate(160%);
+            -webkit-backdrop-filter: blur(12px) saturate(160%);
+            box-shadow:
+                0 8px 24px hsl(var(--shadow-md)),
+                inset 0 1px 0 hsl(var(--surface) / 0.9);
+        }
+
+        /* Hero CTA buttons: transparent with primary border, hover fill */
+        .hero .btn {
+            background: transparent !important;
+            color: hsl(var(--primary)) !important;
+            border: 1px solid hsl(var(--primary)) !important;
+            box-shadow: 0 0 0 0 hsl(var(--primary) / 0), 0 0 12px hsl(var(--primary) / 0.12) !important;
+        }
+        .hero .btn:hover {
+            background: hsl(var(--primary)) !important;
+            color: hsl(var(--primary-foreground)) !important;
+            border-color: hsl(var(--primary)) !important;
+            box-shadow: 0 0 16px hsl(var(--primary) / 0.25) !important;
+        }
+        .hero .btn i[data-lucide] { color: currentColor !important; }
+
+        .hero:hover {
+            box-shadow: 
+                0 40px 90px hsl(var(--shadow-xl)),
+                0 0 0 1px hsl(var(--primary) / 0.10),
+                inset 0 1px 0 hsl(var(--surface));
+        }
+
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, hsl(var(--primary) / 0.14) 0%, transparent 70%);
+            animation: rotate 20s linear infinite;
+        }
+
+        /* subtle frost texture + highlight overlay */
+        .hero::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            background:
+                linear-gradient(180deg, rgba(255,255,255,0.12), rgba(255,255,255,0.04) 40%, rgba(255,255,255,0) 70%),
+                repeating-linear-gradient(45deg, rgba(255,255,255,0.06) 0 2px, rgba(255,255,255,0) 2px 6px);
+            mix-blend-mode: screen;
+            opacity: 0.25;
+        }
+
+        .hero-content {
+            position: relative;
+            z-index: 1;
+        }
+
+        .hero h1 {
+            font-size: 3.5rem;
+            font-weight: 800;
+            margin-bottom: 1rem;
+            background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--accent-foreground)));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-shadow: 0 2px 10px hsl(var(--glow-primary));
+        }
+
+        .hero p {
+            font-size: 1.25rem;
+            color: hsl(var(--muted-foreground));
+            margin-bottom: 2rem;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-bottom: 3rem;
+        }
+
+        /* Liquid glass feature cards */
+        .feature-card {
+            background: linear-gradient(145deg, 
+                hsl(var(--surface) / 0.8), 
+                hsl(var(--surface-elevated) / 0.7),
+                hsl(var(--primary) / 0.02)
+            );
+            border: 1px solid hsl(var(--border) / 0.4);
+            border-radius: 32px;
+            padding: 3rem;
+            text-align: center;
+            transition: all 0.6s cubic-bezier(0.23, 1, 0.32, 1);
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            backdrop-filter: blur(24px) saturate(180%);
+            box-shadow: 
+                0 8px 32px hsl(var(--shadow-sm)),
+                0 0 0 1px hsl(var(--border) / 0.2),
+                inset 0 2px 4px hsl(var(--surface) / 0.8),
+                inset 0 0 40px hsl(var(--primary) / 0.015);
+        }
+
+        .feature-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, hsl(var(--primary) / 0.1), transparent);
+            transition: left 0.5s ease;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-12px) scale(1.03);
+            box-shadow: 
+                0 40px 80px hsl(var(--shadow-lg)),
+                0 0 60px hsl(var(--glow-primary)),
+                0 0 0 1px hsl(var(--primary) / 0.3),
+                inset 0 2px 4px hsl(var(--surface)),
+                inset 0 0 60px hsl(var(--primary) / 0.03);
+            border-color: hsl(var(--primary) / 0.4);
+            backdrop-filter: blur(32px) saturate(200%);
+        }
+
+        .feature-card:hover::before {
+            left: 100%;
+        }
+
+        .feature-icon {
+            width: 60px;
+            height: 60px;
+            margin: 0 auto 1rem;
+            background: linear-gradient(135deg, 
+                hsl(var(--primary) / 0.8), 
+                hsl(var(--accent) / 0.9)
+            );
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.5rem;
+            position: relative;
+            backdrop-filter: blur(8px);
+            box-shadow: 0 4px 16px hsl(var(--glow-primary));
+        }
+
+        .feature-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            color: hsl(var(--foreground));
+        }
+
+        .feature-description {
+            color: hsl(var(--muted-foreground));
+            line-height: 1.6;
+        }
+
+        /* Button styles */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.875rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-decoration: none;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 4px 12px hsl(var(--shadow-sm));
+        }
+
+        .btn-primary {
+            background: hsl(var(--primary));
+            color: hsl(var(--primary-foreground));
+        }
+
+        .btn-primary:hover {
+            background: hsl(var(--primary-hover));
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px hsl(var(--shadow));
+        }
+
+        .btn-secondary {
+            background: hsl(var(--secondary));
+            color: hsl(var(--secondary-foreground));
+            border: 1px solid hsl(var(--border));
+        }
+
+        .btn-secondary:hover {
+            background: hsl(var(--secondary-hover));
+            border-color: hsl(var(--primary));
+            box-shadow: 0 6px 16px hsl(var(--shadow));
+        }
+
+        .btn-lg {
+            padding: 1rem 2rem;
+            font-size: 1rem;
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        /* Liquid glass card styles */
+        .card {
+            background: linear-gradient(145deg, 
+                hsl(var(--surface) / 0.9), 
+                hsl(var(--surface-elevated) / 0.8),
+                hsl(var(--primary) / 0.02)
+            );
+            border: 1px solid hsl(var(--border) / 0.4);
+            border-radius: 28px;
+            padding: 2.5rem;
+            backdrop-filter: blur(32px) saturate(190%);
+            box-shadow: 
+                0 12px 40px hsl(var(--shadow-md)),
+                0 0 0 1px hsl(var(--border) / 0.3),
+                inset 0 2px 4px hsl(var(--surface) / 0.9),
+                inset 0 0 40px hsl(var(--primary) / 0.015);
+            transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+        }
+
+        .card:hover {
+            transform: translateY(-4px) scale(1.01);
+            box-shadow: 
+                0 20px 60px hsl(var(--shadow-lg)),
+                0 0 0 1px hsl(var(--primary) / 0.15),
+                inset 0 2px 4px hsl(var(--surface)),
+                inset 0 0 50px hsl(var(--primary) / 0.025);
+            backdrop-filter: blur(40px) saturate(210%);
+        }
+
+        .card-header {
+            margin-bottom: 1rem;
+        }
+
+        .card-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: hsl(var(--foreground));
+            margin-bottom: 0.5rem;
+        }
+
+        .card-description {
+            color: hsl(var(--muted-foreground));
+            font-size: 0.875rem;
+        }
+
+        /* Learning page styles */
+        .learning-container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .step-indicator {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 3rem;
+        }
+
+        .step {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: hsl(var(--muted));
+            color: hsl(var(--muted-foreground));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            position: relative;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 8px hsl(var(--shadow-sm));
+            cursor: pointer;
+        }
+
+        .step.active {
+            background: hsl(var(--primary));
+            color: hsl(var(--primary-foreground));
+            transform: scale(1.1);
+            box-shadow: 0 0 20px hsl(var(--primary) / 0.3);
+        }
+
+        .step.completed {
+            background: hsl(var(--success));
+            color: hsl(var(--success-foreground));
+        }
+
+        .step-connector {
+            width: 40px;
+            height: 2px;
+            background: hsl(var(--border));
+            transition: background 0.3s ease;
+        }
+
+        .step-connector.completed {
+            background: hsl(var(--success));
+        }
+
+        /* Liquid glass step content */
+        .step-content {
+            background: linear-gradient(145deg, 
+                hsl(var(--surface) / 0.85), 
+                hsl(var(--surface-elevated) / 0.8),
+                hsl(var(--primary) / 0.02)
+            );
+            border-radius: 24px;
+            padding: 2.5rem;
+            margin-bottom: 2rem;
+            border: 1px solid hsl(var(--border) / 0.3);
+            backdrop-filter: blur(20px) saturate(170%);
+            box-shadow: 
+                0 8px 32px hsl(var(--shadow-md)),
+                0 0 0 1px hsl(var(--border) / 0.2),
+                inset 0 1px 0 hsl(var(--surface) / 0.8);
+        }
+
+        .step-title {
+            font-size: 1.75rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            color: hsl(var(--foreground));
+        }
+
+        .step-description {
+            color: hsl(var(--muted-foreground));
+            margin-bottom: 2rem;
+            line-height: 1.6;
+        }
+
+        .views-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        /* Liquid glass view containers */
+        .view-container {
+            background: linear-gradient(145deg, 
+                hsl(var(--surface) / 0.9), 
+                hsl(var(--surface-elevated) / 0.85),
+                hsl(var(--primary) / 0.015)
+            );
+            border: 1px solid hsl(var(--border) / 0.4);
+            border-radius: 14px;
+            padding: 1rem;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center; /* 让内部 SVG 在卡面居中 */
+            transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+            position: relative;
+            overflow: hidden;
+            backdrop-filter: blur(16px) saturate(160%);
+            box-shadow: 
+                0 4px 16px hsl(var(--shadow-sm)),
+                inset 0 1px 0 hsl(var(--surface) / 0.6);
+        }
+
+        .view-container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, hsl(var(--primary) / 0.1), transparent);
+            transition: left 0.5s ease;
+        }
+
+        .view-container:hover {
+            transform: translateY(-6px) scale(1.02);
+            box-shadow: 
+                0 12px 32px hsl(var(--shadow-lg)),
+                0 0 20px hsl(var(--glow-primary)),
+                inset 0 1px 0 hsl(var(--surface) / 0.8);
+            border-color: hsl(var(--primary) / 0.3);
+            backdrop-filter: blur(24px) saturate(180%);
+        }
+
+        .view-container:hover::before {
+            left: 100%;
+        }
+
+        .view-title {
+            font-weight: 700;
+            margin-bottom: 1rem;
+            color: hsl(var(--foreground));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            font-size: 1.1rem;
+        }
+
+        .view-icon {
+            font-size: 1.2rem;
+            animation: float-gentle 3s ease-in-out infinite;
+        }
+
+        /* Ensure Lucide SVG icons follow intended sizing */
+        .view-icon svg, .icon-rotate svg {
+            width: 1.2rem;
+            height: 1.2rem;
+        }
+
+        /* Size Lucide icons in other UI spots */
+        .feature-icon svg { width: 24px; height: 24px; }
+        .user-avatar svg { width: 18px; height: 18px; }
+        .celebration svg { width: 1.2rem; height: 1.2rem; }
+
+        @keyframes float-gentle {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-3px); }
+        }
+
+        .view-svg {
+            border-radius: 8px;
+            background: hsl(var(--background));
+            display: block;
+            margin: 0 auto;
+            width: 224px;   /* 320px 缩小约 30% */
+            height: 182px;  /* 260px 缩小约 30% */
+            max-width: 100%;
+        }
+
+        /* Liquid glass 3D container */
+        .cube-3d-container {
+            background: linear-gradient(145deg, 
+                hsl(var(--surface) / 0.9), 
+                hsl(var(--surface-elevated) / 0.85),
+                hsl(var(--primary) / 0.02)
+            );
+            border: 1px solid hsl(var(--border) / 0.4);
+            border-radius: 16px;
+            padding: 1rem;
+            text-align: center;
+            margin-bottom: 2rem;
+            backdrop-filter: blur(20px) saturate(170%);
+            box-shadow: 
+                0 8px 32px hsl(var(--shadow-md)),
+                inset 0 1px 0 hsl(var(--surface) / 0.7);
+        }
+
+        .cube-3d-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            color: hsl(var(--foreground));
+        }
+
+        .cube-3d {
+            border-radius: 12px;
+            box-shadow: 0 10px 25px hsl(var(--shadow));
+        }
+
+        .cube-controls {
+            margin-top: 1rem;
+            color: hsl(var(--muted-foreground));
+            font-size: 0.875rem;
+        }
+
+        /* Liquid glass explanation panel */
+        .explanation {
+            background: linear-gradient(135deg, 
+                hsl(var(--accent) / 0.6), 
+                hsl(var(--secondary) / 0.8),
+                hsl(var(--primary) / 0.08)
+            );
+            border: 1px solid hsl(var(--primary) / 0.15);
+            border-radius: 14px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            position: relative;
+            overflow: hidden;
+            backdrop-filter: blur(16px) saturate(160%);
+            color: hsl(var(--accent-foreground));
+            box-shadow: 
+                0 6px 24px hsl(var(--shadow-sm)),
+                inset 0 1px 0 hsl(var(--surface) / 0.5);
+        }
+
+        .navigation {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 1rem;
+        }
+
+        /* Practice page styles */
+        .practice-container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .question-header {
+            text-align: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .question-title {
+            font-size: 1.6rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            color: hsl(var(--foreground));
+        }
+
+        .question-description {
+            color: hsl(var(--muted-foreground));
+            font-size: 1.1rem;
+        }
+
+        .question-progress {
+            display: inline-block;
+            background: hsl(var(--primary));
+            color: hsl(var(--primary-foreground));
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-weight: 600;
+            margin-bottom: 2rem;
+            animation: pulse 2s infinite;
+        }
+
+        .practice-layout {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            align-items: stretch; /* 让两侧卡片等高 */
+        }
+
+        /* Practice: three views in one row and slightly smaller UI */
+        .practice-left .views-grid {
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.75rem;
+        }
+
+        #practice-page .view-container {
+            padding: 0.75rem;
+            display: block; /* 保持练习区卡片内容顶部排列 */
+        }
+
+        #practice-page .view-title {
+            font-size: 0.95rem;
+            margin-bottom: 0.25rem;
+        }
+
+        #practice-page .view-svg {
+            width: 160px;
+            height: 130px;
+        }
+
+        #practice-page .question-title {
+            font-size: 1.4rem;
+            margin-bottom: 0.5rem;
+        }
+
+        #practice-page .question-description {
+            font-size: 1rem;
+        }
+
+        #practice-page .practice-left {
+            padding: 1.75rem;
+        }
+
+        #practice-page .practice-right {
+            padding: 1.25rem;
+        }
+
+        #practice-page .input-group {
+            padding: 1.25rem;
+            gap: 1rem;
+            margin-bottom: 1rem;
+            margin-top: 0.75rem;
+        }
+
+        #practice-page .btn {
+            padding: 0.6rem 1.2rem;
+            font-size: 0.85rem;
+        }
+
+        #practice-page .input {
+            padding: 0.8rem;
+            font-size: 1rem;
+            width: 120px;
+        }
+
+        /* Liquid glass practice panels */
+        .practice-left {
+            background: linear-gradient(145deg, 
+                hsl(var(--surface) / 0.9), 
+                hsl(var(--surface-elevated) / 0.85),
+                hsl(var(--primary) / 0.02)
+            );
+            border: 1px solid hsl(var(--border) / 0.4);
+            border-radius: 24px;
+            padding: 2.5rem;
+            backdrop-filter: blur(24px) saturate(175%);
+            box-shadow: 
+                0 12px 40px hsl(var(--shadow-md)),
+                inset 0 1px 0 hsl(var(--surface) / 0.8);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .practice-left::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, hsl(var(--primary)), hsl(var(--accent-foreground)));
+        }
+
+        .practice-right {
+            background: linear-gradient(145deg, 
+                hsl(var(--surface) / 0.9), 
+                hsl(var(--surface-elevated) / 0.85),
+                hsl(var(--primary) / 0.02)
+            );
+            border: 1px solid hsl(var(--border) / 0.4);
+            border-radius: 16px;
+            padding: 1.5rem;
+            backdrop-filter: blur(24px) saturate(175%);
+            box-shadow: 
+                0 12px 40px hsl(var(--shadow-md)),
+                inset 0 1px 0 hsl(var(--surface) / 0.8);
+            min-height: 360px;
+            position: sticky;
+            top: 0; /* 顶部对齐左侧卡片 */
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+        }
+
+        .default-content {
+            text-align: center;
+            padding: 1rem;
+            opacity: 0.8;
+        }
+
+        .default-content .icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            animation: pulse 3s infinite;
+        }
+
+        .default-content h3 {
+            color: hsl(var(--muted-foreground));
+            margin-bottom: 1rem;
+            font-weight: 600;
+        }
+
+        .default-content p {
+            color: hsl(var(--muted-foreground));
+            line-height: 1.6;
+            font-size: 0.95rem;
+        }
+
+        .solution-panel {
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.5s ease;
+        }
+
+        .solution-panel.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* Liquid glass tips panel */
+        .tips-panel {
+            background: linear-gradient(135deg, 
+                hsl(var(--accent) / 0.5), 
+                hsl(var(--secondary) / 0.7),
+                hsl(var(--primary) / 0.06)
+            );
+            border: 1px solid hsl(var(--primary) / 0.12);
+            border-radius: 20px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            position: relative;
+            overflow: hidden;
+            backdrop-filter: blur(16px) saturate(160%);
+            box-shadow: 
+                0 6px 24px hsl(var(--shadow-sm)),
+                inset 0 1px 0 hsl(var(--surface) / 0.4);
+        }
+
+        .tips-panel::before {
+            content: '';
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            font-size: 1.5rem;
+            animation: bounce 2s infinite;
+        }
+
+        .tips-title {
+            font-weight: 700;
+            color: hsl(var(--accent-foreground));
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .tips-list {
+            color: hsl(var(--accent-foreground));
+            font-size: 0.95rem;
+            line-height: 1.6;
+        }
+
+        .tips-list ol {
+            margin: 0.5rem 0 0 1.5rem;
+            padding: 0;
+        }
+
+        .tips-list li {
+            margin-bottom: 0.5rem;
+        }
+
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% {
+                transform: translateY(0);
+            }
+            40% {
+                transform: translateY(-10px);
+            }
+            60% {
+                transform: translateY(-5px);
+            }
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                transform: scale(1);
+                box-shadow: 0 0 0 0 hsl(var(--primary) / 0.7);
+            }
+            50% {
+                transform: scale(1.05);
+                box-shadow: 0 0 0 10px hsl(var(--primary) / 0);
+            }
+        }
+
+        /* Liquid glass input group */
+        .input-group {
+            background: linear-gradient(145deg, 
+                hsl(var(--surface) / 0.9), 
+                hsl(var(--surface-elevated) / 0.85),
+                hsl(var(--primary) / 0.02)
+            );
+            border: 1px solid hsl(var(--border) / 0.4);
+            border-radius: 20px;
+            padding: 2.5rem;
+            text-align: center;
+            margin-bottom: 2rem;
+            backdrop-filter: blur(16px) saturate(160%);
+            box-shadow: 
+                0 6px 24px hsl(var(--shadow-sm)),
+                inset 0 1px 0 hsl(var(--surface) / 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        .input-group label {
+            font-weight: 700;
+            font-size: 1.1rem;
+            color: hsl(var(--foreground));
+            white-space: nowrap;
+        }
+
+        .input {
+            padding: 1rem;
+            border: 1px solid hsl(var(--border));
+            border-radius: 8px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            width: 150px;
+            text-align: center;
+            margin: 0 1rem;
+            background: hsl(var(--background));
+            transition: all 0.2s ease;
+        }
+
+        .input:focus {
+            outline: none;
+            border-color: hsl(var(--primary));
+            box-shadow: 0 0 0 3px hsl(var(--primary) / 0.1);
+        }
+
+        .result {
+            padding: 1rem 2rem;
+            border-radius: 8px;
+            margin-bottom: 2rem;
+            font-weight: 600;
+            text-align: center;
+        }
+
+        .result.correct {
+            background: hsl(var(--success) / 0.1);
+            border: 1px solid hsl(var(--success));
+            color: hsl(var(--success));
+        }
+
+        .result.incorrect {
+            background: hsl(var(--error) / 0.1);
+            border: 1px solid hsl(var(--error));
+            color: hsl(var(--error));
+        }
+
+        @keyframes fadeOut {
+            from {
+                opacity: 1;
+                transform: translateY(0);
+            }
+            to {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+        }
+
+        /* Responsive design */
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+
+            .hero h1 {
+                font-size: 2.5rem;
+            }
+
+            .nav {
+                display: none;
+            }
+
+            .features {
+                grid-template-columns: 1fr;
+            }
+
+            .views-grid { grid-template-columns: 1fr; }
+            #practice-page .practice-left .views-grid { grid-template-columns: 1fr; }
+
+            .navigation {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .input-group {
+                padding: 1rem;
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .step-indicator {
+                gap: 0.5rem;
+            }
+
+            .step {
+                width: 32px;
+                height: 32px;
+                font-size: 0.875rem;
+            }
+
+            .step-connector {
+                width: 20px;
+            }
+
+            .practice-layout {
+                grid-template-columns: 1fr;
+                gap: 2rem;
+            }
+
+            .practice-right {
+                position: static;
+            }
+
+            .tips-panel {
+                margin-bottom: 1.5rem;
+            }
+
+            .cube-3d {
+                width: 100% !important;
+                height: 250px !important;
+            }
+
+            .view-svg {
+                width: 100% !important;
+                height: 175px !important; /* 移动端也缩小约 30% */
+            }
+
+            .practice-3d {
+                width: 100% !important;
+                height: 200px !important;
+            }
+        }
+
+        /* Loading animation */
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid hsl(var(--muted));
+            border-radius: 50%;
+            border-top-color: hsl(var(--primary));
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Enhanced animations */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes slideInFromLeft {
+            from {
+                opacity: 0;
+                transform: translateX(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        @keyframes slideInFromRight {
+            from {
+                opacity: 0;
+                transform: translateX(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        @keyframes glow {
+            0%, 100% {
+                box-shadow: 0 0 20px hsl(var(--primary) / 0.3);
+            }
+            50% {
+                box-shadow: 0 0 30px hsl(var(--primary) / 0.6);
+            }
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+
+        .animate-fadeInUp {
+            animation: fadeInUp 0.6s ease-out;
+        }
+
+        .animate-slideInFromLeft {
+            animation: slideInFromLeft 0.5s ease-out;
+        }
+
+        .animate-slideInFromRight {
+            animation: slideInFromRight 0.5s ease-out;
+        }
+
+        .animate-glow {
+            animation: glow 2s ease-in-out infinite;
+        }
+
+        .animate-shake {
+            animation: shake 0.5s ease-in-out;
+        }
+
+        /* Hover effects */
+        .hover-lift {
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .hover-lift:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 35px hsl(var(--shadow));
+        }
+
+        /* Icon animations */
+        .icon-bounce {
+            animation: bounce 2s infinite;
+        }
+
+        .icon-rotate {
+            animation: spin 4s linear infinite;
+        }
+
+        .icon-float {
+            animation: float-gentle 3s ease-in-out infinite;
+        }
+
+        /* Glass cube in hero section */
+        .hero-glass-cube {
+            position: absolute;
+            width: 300px;
+            height: 300px;
+            right: -100px;
+            bottom: -100px;
+            background: linear-gradient(135deg, 
+                hsl(var(--primary) / 0.2), 
+                hsl(var(--accent) / 0.3)
+            );
+            border-radius: 16px;
+            backdrop-filter: blur(32px);
+            box-shadow: 0 20px 60px hsl(var(--glow-primary));
+            transform: rotate(15deg);
+            z-index: 0;
+            opacity: 0.7;
+            transition: all 0.5s ease;
+        }
+
+        .hero:hover .hero-glass-cube {
+            transform: rotate(20deg) scale(1.05);
+            box-shadow: 0 30px 80px hsl(var(--glow-primary));
+            opacity: 0.8;
+        }
+
+        /* View selector tabs */
+        .view-selector {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .view-tab {
+            padding: 0.75rem 1.5rem;
+            border-radius: 20px;
+            background: hsl(var(--secondary));
+            color: hsl(var(--secondary-foreground));
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .view-tab.active {
+            background: hsl(var(--primary));
+            color: hsl(var(--primary-foreground));
+            box-shadow: 0 4px 12px hsl(var(--glow-primary));
+        }
+
+        /* Learning cube highlight effect */
+        .cube-highlight {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at center, 
+                hsl(var(--primary) / 0.2), 
+                transparent 70%
+            );
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .cube-3d-container:hover .cube-highlight {
+            opacity: 1;
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: hsl(var(--background));
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: hsl(var(--primary) / 0.5);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: hsl(var(--primary));
+        }
+
+        /* Viewport indicators */
+        .viewport-indicator {
+            position: absolute;
+            bottom: 1rem;
+            left: 1rem;
+            display: flex;
+            gap: 0.5rem;
+            z-index: 10;
+        }
+
+        .indicator-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: hsl(var(--primary));
+            opacity: 0.5;
+            transition: opacity 0.2s ease;
+        }
+
+        .indicator-dot.active {
+            opacity: 1;
+            box-shadow: 0 0 0 2px hsl(var(--primary) / 0.3);
+        }
+    </style>
+</head>
+<body>
+    <!-- Animated geometric background -->
+    <div class="geometric-bg" id="geometricBg"></div>
+
+    <!-- Header (仅非主页显示；无 Logo / 无用户设置) -->
+    <header class="header" id="site-header" style="display: none;">
+        <div class="header-content">
+            <nav class="nav">
+                <a href="#" class="nav-item" id="nav-home" onclick="showPage('home')">主页</a>
+                <a href="#" class="nav-item" id="nav-learn" onclick="showPage('learn')">学习</a>
+                <a href="#" class="nav-item" id="nav-practice" onclick="showPage('practice')">练习</a>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Home Page -->
+    <div id="home-page" class="page active">
+        <div class="container">
+            <div class="hero">
+                <div class="hero-glass-cube"></div>
+                <div class="hero-content">
+                    <h1>三视图计数教学平台</h1>
+                    <p>通过交互式三视图教学，掌握立方体计数的核心原理和解题技巧</p>
+                    <div style="display: flex; gap: 1rem; justify-content: center; margin-top: 2rem; flex-wrap: wrap;">
+                        <button class="btn btn-primary btn-lg" onclick="showPage('learn')">
+                            <i data-lucide="graduation-cap"></i> 开始学习
+                        </button>
+                        <button class="btn btn-secondary btn-lg" onclick="showPage('practice')">
+                            <i data-lucide="play"></i> 练习题目
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="features">
+                <div class="feature-card" onclick="showPage('learn')">
+                    <div class="feature-icon"><i data-lucide="book-open"></i></div>
+                    <h3 class="feature-title">系统化学习</h3>
+                    <p class="feature-description">从基础概念到高级技巧，循序渐进地掌握三视图立方体计数方法</p>
+                </div>
+                <div class="feature-card" onclick="showPage('practice')">
+                    <div class="feature-icon"><i data-lucide="target"></i></div>
+                    <h3 class="feature-title">互动练习</h3>
+                    <p class="feature-description">丰富的练习题目，实时反馈，帮助你巩固所学知识</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Learning Page -->
+    <div id="learn-page" class="page">
+        <div class="container">
+            <div class="learning-container">
+                <div class="card-header" style="text-align: center; margin-bottom: 2rem;">
+                    <h1 class="card-title" style="font-size: 2.5rem;">学习原理</h1>
+                    <p class="card-description" style="font-size: 1.1rem;">通过三视图计算立方体数量的系统化学习</p>
+                </div>
+
+                <div class="step-indicator">
+                    <div class="step active" id="step-1">1</div>
+                    <div class="step-connector" id="connector-1"></div>
+                    <div class="step" id="step-2">2</div>
+                    <div class="step-connector" id="connector-2"></div>
+                    <div class="step" id="step-3">3</div>
+                </div>
+
+                <div class="step-content">
+                    <h2 class="step-title" id="step-title">步骤一：分析正面图</h2>
+                    <p class="step-description" id="step-description">正面图（正视图）是从物体正前方观察得到的投影，它展示了物体在高度和宽度方向上的形状和结构。</p>
+
+                    <!-- Learning Layout: Left-Right -->
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 2rem;">
+                        <!-- Left side - 3D visualization -->
+                        <div style="display: flex; flex-direction: column; align-items: center;">
+                            <h4 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 1rem; color: hsl(var(--foreground)); text-align: center;">
+                                <i data-lucide="box" class="icon-rotate"></i>
+                                立体图
+                            </h4>
+                            <div class="cube-3d-container hover-lift" style="margin-bottom: 0; width: 100%; position: relative;">
+                                <div class="cube-highlight"></div>
+                                <canvas class="cube-3d" id="learning-canvas" width="320" height="260"></canvas>
+                                <div class="cube-controls">拖拽旋转 • 滚轮缩放 • 触摸操控</div>
+                                <div style="margin-top: 1rem; padding: 1rem; background: hsl(var(--accent) / 0.3); border-radius: 8px; font-size: 0.9rem; color: hsl(var(--accent-foreground));">
+                                    <strong>交互提示：</strong>拖拽旋转3D模型，观察立方体的空间分布，验证三视图的对应关系
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Right side - Single active 2D view with heading same level as 3D -->
+                        <div style="display: flex; flex-direction: column; align-items: center;">
+                            <h4 id="active-view-title" style="font-size: 1.25rem; font-weight: 700; margin-bottom: 1rem; color: hsl(var(--foreground)); text-align: center;"></h4>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; height: 100%; justify-items: stretch; width: 100%;">
+                                <!-- Top view - top right -->
+                                <div class="view-container hover-lift" id="container-top">
+                                    <svg class="view-svg" id="top-view" width="120" height="120"></svg>
+                                </div>
+                                
+                                <!-- Side view - bottom right -->
+                                <div class="view-container hover-lift" id="container-side">
+                                    <svg class="view-svg" id="side-view" width="120" height="120"></svg>
+                                </div>
+                                
+                                <!-- Front view - bottom spanning both columns -->
+                                <div class="view-container hover-lift" id="container-front" style="grid-column: 1 / -1;">
+                                    <svg class="view-svg" id="front-view" width="120" height="120"></svg>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="explanation">
+                        <div id="explanation-text" style="white-space: pre-line; line-height: 1.8;"></div>
+                    </div>
+                </div>
+
+                <div class="navigation">
+                    <button class="btn btn-secondary" id="prev-btn" onclick="prevStep()" disabled>
+                        ← 上一步
+                    </button>
+                    <span id="step-info">第 1 步，共 3 步</span>
+                    <button class="btn btn-primary" id="next-btn" onclick="nextStep()">
+                        下一步 →
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Practice Page -->
+    <div id="practice-page" class="page">
+        <div class="container">
+            <div class="practice-container">
+                <div class="question-header">
+                    <div class="question-progress">
+                        题目 <span id="current-question">1</span> / 3
+                    </div>
+                </div>
+
+                <div class="practice-layout">
+                    <div class="practice-left">
+                        <!-- 解题思路面板已移除，腾出空间给题目与答案卡片 -->
+
+                        <h3 style="text-align: center; margin-bottom: 2rem; font-size: 1.3rem; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
+                            <i data-lucide="bar-chart-3"></i>
+                            <span>请根据以下三视图，计算该几何体包含多少个立方体</span>
+                        </h3>
+
+                        <div class="views-grid">
+                            <div class="view-container">
+                                <h4 class="view-title">
+                                    <i data-lucide="eye" class="view-icon"></i>
+                                    正面图
+                                </h4>
+                                <svg class="view-svg practice-front" width="120" height="120"></svg>
+                            </div>
+                            <div class="view-container">
+                                <h4 class="view-title">
+                                    <i data-lucide="arrow-down" class="view-icon"></i>
+                                    俯视图
+                                </h4>
+                                <svg class="view-svg practice-top" width="120" height="120"></svg>
+                            </div>
+                            <div class="view-container">
+                                <h4 class="view-title">
+                                    <i data-lucide="arrow-right" class="view-icon"></i>
+                                    侧面图
+                                </h4>
+                                <svg class="view-svg practice-side" width="120" height="120"></svg>
+                            </div>
+                        </div>
+
+                        <div class="input-group">
+                            <label for="answer"><i data-lucide="hash"></i> 立方体数量：</label>
+                            <input type="number" id="answer" class="input" placeholder="请输入数字" min="1">
+                            <button class="btn btn-primary" onclick="submitAnswer()">
+                                ✓ 提交答案
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="practice-right">
+                        <div id="default-content" class="default-content">
+                            <div class="icon"><i data-lucide="box"></i></div>
+                            <h3>等待你的答案</h3>
+                            <p>请根据左侧的三视图分析立方体的数量，然后提交你的答案。提交后，这里将显示详细的解答和3D可视化效果。</p>
+                            <div style="margin-top: 2rem; padding: 1.5rem; background: hsl(var(--accent) / 0.3); border-radius: 8px; text-align: left;">
+                                <div style="font-weight: 600; margin-bottom: 0.5rem; color: hsl(var(--accent-foreground)); display: flex; align-items: center; gap: 0.4rem;"><i data-lucide="lightbulb"></i> 分析要点：</div>
+                                <ul style="margin: 0; padding-left: 1.5rem; line-height: 1.6; font-size: 0.9rem;">
+                                    <li>观察三个视图的对应关系</li>
+                                    <li>确定立方体在空间中的位置</li>
+                                    <li>避免重复计数和遗漏</li>
+                                    <li>逐层验证计算结果</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div id="result-container" style="display: none;"></div>
+
+                        <div class="solution-panel" id="solution-container" style="display: none;">
+                            <div style="text-align: center; margin-bottom: 1rem;">
+                                <canvas class="cube-3d practice-3d" width="320" height="240" style="border-radius: 12px; box-shadow: 0 10px 25px hsl(var(--shadow));"></canvas>
+                                <div class="cube-controls" style="margin-top: 0.5rem; display: flex; gap: 0.5rem; align-items: center; justify-content: center;">
+                                    <i data-lucide="mouse"></i> 拖拽旋转 • <i data-lucide="mouse"></i> 滚轮缩放
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="navigation" id="practice-nav" style="display: none; justify-content: center; margin-top: 2rem;">
+                            <button class="btn btn-primary btn-lg" onclick="nextQuestion()" style="animation: pulse 2s infinite; display: inline-flex; align-items: center; gap: 0.5rem;">
+                                <i data-lucide="rocket"></i> 下一题
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global state
+        let currentStep = 0;
+        let currentQuestionIndex = 0;
+        let sceneData = null;
+        let practiceSceneData = null;
+        let stepsClickBound = false;
+
+        // Learning data
+        const learningSteps = [
+            {
+                title: "步骤一：分析正面图",
+                description: "正面图（正视图）是从物体正前方观察得到的二维投影图。它如同用平行光线从正前方照射物体，在后方屏幕上形成的阴影。正面图展示了物体在高度方向（竖直方向）和宽度方向（水平方向）上的外形轮廓和内部结构。",
+                frontView: [[1,1,0],[1,1,1],[1,1,1]],
+                topView: [[1,1,1],[1,1,1]],
+                sideView: [[1,1],[1,1],[1,1]],
+                highlightView: 'front',
+                explanation: "观察要点：正面图中的每个小方格代表在该位置可以看到立方体的一个面。当前正面图显示了8个绿色高亮的位置，表示从正面可以观察到8个立方体表面。特别注意右上角（第1行第3列）为空白，说明该位置没有立方体。\n\n关键理解：仅凭正面图无法确定立方体的准确数量，因为：① 多个立方体可能前后重叠，在正面图中只显示为一个方格；② 无法获知物体在深度方向的信息。"
+            },
+            {
+                title: "步骤二：结合俯视图分析",
+                description: "俯视图是从物体正上方垂直向下观察得到的二维投影图。它展示了物体在宽度方向（左右方向）和深度方向（前后方向）上的布局结构。俯视图与正面图的结合分析，可以帮助我们确定立方体在三维空间中的实际分布。",
+                frontView: [[1,1,0],[1,1,1],[1,1,1]],
+                topView: [[1,1,1],[1,1,1]],
+                sideView: [[1,1],[1,1],[1,1]],
+                highlightView: 'top',
+                explanation: "观察要点：俯视图显示了物体在地面上的'足迹'分布。绿色高亮区域表示该位置至少存在一个立方体。当前俯视图为2×3的矩形，说明物体占据6个基础位置。\n\n分析方法：将正面图与俯视图进行对比验证：正面图第1行第3列为空（值为0），虽然俯视图对应位置有标记，但由于正面图的限制，我们可以确定该位置在第1层（顶层）确实没有立方体。这种交叉验证是三视图分析的核心思想。"
+            },
+            {
+                title: "步骤三：侧面图验证与综合计算",
+                description: "侧面图（左视图）是从物体左侧方向观察得到的二维投影图。它展示了物体在高度方向（竖直方向）和深度方向（前后方向）上的结构。通过综合分析三个视图的信息，我们可以运用'三视图交集法'确定每个空间位置是否存在立方体。",
+                frontView: [[1,1,0],[1,1,1],[1,1,1]],
+                topView: [[1,1,1],[1,1,1]],
+                sideView: [[1,1],[1,1],[1,1]],
+                highlightView: 'side',
+                explanation: "观察要点：侧面图验证了物体的高度和深度信息。绿色高亮显示该几何体在侧面呈现3×2的矩形，确认了物体的整体轮廓。\n\n综合计算法：只有当某个空间位置在三个视图中都有对应标记时，该位置才真正存在立方体。具体计算：\n• 第1列：正面图3个，俯视图2个，侧面图3个 → 实际6个立方体\n• 第2列：正面图3个，俯视图2个，侧面图3个 → 实际6个立方体  \n• 第3列：正面图2个（第1行为0），俯视图2个，侧面图3个 → 实际4个立方体\n\n最终结果：6 + 6 + 4 = 16个立方体（注：实际计算需要考虑三视图的精确对应关系）"
+            }
+        ];
+
+        // Practice questions
+        const practiceQuestions = [
+            {
+                frontView: [[1,1],[1,1]],
+                topView: [[1,1],[1,1]],
+                sideView: [[1,1],[1,1]],
+                answer: 8,
+                explanation: "这是一个基础的2×2×2立方体组合（即一个大立方体被分成8个小立方体）。通过分析三个视图，可以确定这是一个规整的立方体排列，总共包含8个立方体。"
+            },
+            {
+                frontView: [[1,1,0],[1,1,1]],
+                topView: [[1,1,1],[1,1,0]],
+                sideView: [[1,1],[1,1]],
+                answer: 9,
+                explanation: "这个几何体有不规则的形状。通过三视图分析：需要特别注意各视图之间的对应关系，有些位置虽然在单个视图中不明显，但通过三视图交集法可以确定其存在。总共9个立方体。"
+            },
+            {
+                frontView: [[1,0,1],[1,1,1],[1,1,1]],
+                topView: [[1,1,1],[1,1,1]],
+                sideView: [[1,1],[1,1],[1,1]],
+                answer: 16,
+                explanation: "这是一个包含空隙的复杂几何体。正面图显示顶层中间位置没有立方体，形成了一个凹陷。通过三视图综合分析和逐层计算，可以确定总共16个立方体。"
+            }
+        ];
+
+        // Initialize background animation with more shapes
+        function initBackground() {
+            const bg = document.getElementById('geometricBg');
+            const shapes = ['cube', 'triangle', 'circle', 'diamond', 'hexagon', 'star', 'ring', 'pill', 'dot', 'beam', 'arc'];
+            
+            function createShape() {
+                const shapeType = shapes[Math.floor(Math.random() * shapes.length)];
+                const shape = document.createElement('div');
+                shape.className = `floating-shape ${shapeType}`;
+                shape.style.left = Math.random() * 100 + '%';
+                // Randomize durations; dots twinkle faster
+                if (shapeType === 'dot') {
+                    shape.style.setProperty('--twinkle', (1.5 + Math.random() * 1.5).toFixed(2) + 's');
+                    shape.style.setProperty('--float', (18 + Math.random() * 10).toFixed(2) + 's');
+                } else if (shapeType === 'beam') {
+                    shape.style.setProperty('--beam-dur', (14 + Math.random() * 10).toFixed(2) + 's');
+                } else {
+                    shape.style.animationDuration = (20 + Math.random() * 18) + 's';
+                }
+                shape.style.animationDelay = Math.random() * 5 + 's';
+                shape.style.opacity = 0.04 + Math.random() * 0.06;
+                
+                // Add random size variation
+                const scale = (shapeType === 'dot') ? (0.6 + Math.random() * 0.8) : (0.6 + Math.random() * 0.9);
+                shape.style.transform = `scale(${scale})`;
+                
+                bg.appendChild(shape);
+                
+                // Remove after animation
+                setTimeout(() => {
+                    if (shape.parentNode) {
+                        shape.parentNode.removeChild(shape);
+                    }
+                }, 35000);
+            }
+            
+            // Create initial shapes with more variety
+            for (let i = 0; i < 30; i++) {
+                setTimeout(createShape, i * 1000);
+            }
+            
+            // Continue creating shapes more frequently
+            setInterval(createShape, 1200);
+        }
+
+        // Page navigation
+        function showPage(pageId) {
+            // Hide all pages
+            document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
+            // Remove active nav items
+            document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+            
+            // Show target page
+            document.getElementById(pageId + '-page').classList.add('active');
+            // Highlight nav item
+            const navItem = document.getElementById('nav-' + pageId);
+            if (navItem) navItem.classList.add('active');
+
+            // Toggle header visibility: hide on home, show on others
+            const headerEl = document.getElementById('site-header');
+            if (headerEl) {
+                headerEl.style.display = (pageId === 'home') ? 'none' : '';
+            }
+            
+            // Initialize page-specific content
+            if (pageId === 'learn') {
+                initLearningPage();
+            } else if (pageId === 'practice') {
+                initPracticePage();
+            }
+        }
+
+        // Bind click handlers for step indicator
+        function attachStepClickHandlers() {
+            if (stepsClickBound) return;
+            const steps = document.querySelectorAll('.step');
+            steps.forEach((el, index) => {
+                el.addEventListener('click', () => {
+                    if (index >= 0 && index < learningSteps.length) {
+                        currentStep = index;
+                        updateLearningStep();
+                    }
+                });
+            });
+            stepsClickBound = true;
+        }
+
+        // Initialize learning page
+        function initLearningPage() {
+            if (!sceneData) {
+                const canvas = document.getElementById('learning-canvas');
+                sceneData = init3D(canvas);
+                animate(sceneData);
+            }
+            attachStepClickHandlers();
+            updateLearningStep();
+            requestAnimationFrame(equalizeLearningHeights);
+        }
+
+        // Initialize practice page
+        function initPracticePage() {
+            if (!practiceSceneData) {
+                const canvas = document.querySelector('.practice-3d');
+                practiceSceneData = init3D(canvas);
+                animate(practiceSceneData);
+            }
+            updatePracticeQuestion();
+        }
+
+        // Build cubes from projections
+        function buildCubesFromProjections(front, top, side) {
+            const cubes = [];
+            const height = front.length;
+            const width = front[0].length;
+            const depth = top.length;
+            
+            for (let y = 0; y < height; y++) {
+                for (let x = 0; x < width; x++) {
+                    for (let z = 0; z < depth; z++) {
+                        const frontVisible = front[height - 1 - y][x] === 1;
+                        const topVisible = top[z][x] === 1;
+                        const sideVisible = side[height - 1 - y][z] === 1;
+                        
+                        if (frontVisible && topVisible && sideVisible) {
+                            cubes.push({ x, y, z });
+                        }
+                    }
+                }
+            }
+            return cubes;
+        }
+
+        // Draw view with improved styling
+        function drawView(svg, viewData, highlightAll = false) {
+            svg.innerHTML = '';
+            const cellSize = 40; // 放大单元格以提升整体尺寸
+            const padding = 10;
+
+            const width = viewData[0].length * cellSize + padding * 2;
+            const height = viewData.length * cellSize + padding * 2;
+
+            // 使用 viewBox 以便外部通过 CSS 控制最终渲染尺寸，同时保持内容居中缩放
+            svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
+            svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+
+            // 练习板块使用蓝色色调
+            const isPractice = svg.classList.contains('practice-front') || svg.classList.contains('practice-top') || svg.classList.contains('practice-side');
+            const palette = isPractice ? {
+                bg: 'hsl(200 100% 98%)',           // 背景淡蓝
+                grid: 'hsl(200 40% 90%)',          // 网格线淡蓝
+                cell: 'hsl(0 0% 100%)',            // 单元格底色
+                fill: 'hsl(200 90% 70%)',          // 普通蓝块
+                stroke: 'hsl(200 90% 55%)',
+                hiFill: 'hsl(200 100% 50%)',       // 高亮蓝块
+                hiStroke: 'hsl(200 100% 40%)'
+            } : {
+                bg: 'hsl(197 15% 95%)',
+                grid: 'hsl(197 25% 90%)',
+                cell: 'white',
+                fill: 'hsl(30 100% 70%)',          // 学习区保持原有暖色
+                stroke: 'hsl(30 100% 60%)',
+                hiFill: 'hsl(197 100% 50%)',
+                hiStroke: 'hsl(197 100% 40%)'
+            };
+            
+            // Background
+            const bgRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+            bgRect.setAttribute('width', width);
+            bgRect.setAttribute('height', height);
+            bgRect.setAttribute('fill', palette.bg);
+            bgRect.setAttribute('rx', '8');
+            svg.appendChild(bgRect);
+            
+            // Grid and cubes
+            viewData.forEach((row, rowIndex) => {
+                row.forEach((cell, colIndex) => {
+                    const x = padding + colIndex * cellSize;
+                    const y = padding + rowIndex * cellSize;
+                    
+                    // Grid cell background
+                    const cellBg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                    cellBg.setAttribute('x', x);
+                    cellBg.setAttribute('y', y);
+                    cellBg.setAttribute('width', cellSize);
+                    cellBg.setAttribute('height', cellSize);
+                    cellBg.setAttribute('fill', palette.cell);
+                    cellBg.setAttribute('stroke', palette.grid);
+                    cellBg.setAttribute('stroke-width', '1');
+                    svg.appendChild(cellBg);
+                    
+                    // Cube if present
+                    if (cell === 1) {
+                        const cubeRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                        cubeRect.setAttribute('x', x + 2);
+                        cubeRect.setAttribute('y', y + 2);
+                        cubeRect.setAttribute('width', cellSize - 4);
+                        cubeRect.setAttribute('height', cellSize - 4);
+                        cubeRect.setAttribute('rx', '4');
+                        
+                        if (highlightAll) {
+                            cubeRect.setAttribute('fill', palette.hiFill);
+                            cubeRect.setAttribute('stroke', palette.hiStroke);
+                            cubeRect.setAttribute('stroke-width', '2');
+                        } else {
+                            cubeRect.setAttribute('fill', palette.fill);
+                            cubeRect.setAttribute('stroke', palette.stroke);
+                            cubeRect.setAttribute('stroke-width', '1');
+                        }
+                        
+                        svg.appendChild(cubeRect);
+                    }
+                });
+            });
+        }
+
+        // 3D scene initialization
+        function init3D(canvas) {
+            const scene = new THREE.Scene();
+            const camera = new THREE.PerspectiveCamera(60, canvas.width / canvas.height, 0.1, 1000);
+            const renderer = new THREE.WebGLRenderer({ 
+                canvas: canvas, 
+                antialias: true,
+                alpha: true 
+            });
+            renderer.setSize(canvas.width, canvas.height);
+            renderer.setClearColor(0xf8f9fa, 1);
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            
+            // Lighting - 优化光照以提高立方体颜色可见度
+            const ambientLight = new THREE.AmbientLight(0x404040, 0.6); // 增加环境光强度
+            scene.add(ambientLight);
+            
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.7); // 略减主光源强度
+            directionalLight.position.set(0, 5, 10);
+            directionalLight.castShadow = true;
+            directionalLight.shadow.mapSize.width = 2048;
+            directionalLight.shadow.mapSize.height = 2048;
+            directionalLight.shadow.camera.left = -10;
+            directionalLight.shadow.camera.right = 10;
+            directionalLight.shadow.camera.top = 10;
+            directionalLight.shadow.camera.bottom = -10;
+            directionalLight.shadow.camera.near = 1;
+            directionalLight.shadow.camera.far = 20;
+            directionalLight.shadow.bias = -0.001; // 减少阴影伪影
+            scene.add(directionalLight);
+            
+            // 添加补充光源以提高立方体颜色可见度
+            const fillLight = new THREE.DirectionalLight(0xffffff, 0.3);
+            fillLight.position.set(-5, 3, -5);
+            scene.add(fillLight);
+            
+            // Ground - 简化地面，只保留网格
+            const gridHelper = new THREE.GridHelper(8, 8, 0x999999, 0xcccccc);
+            gridHelper.position.y = -0.99;
+            scene.add(gridHelper);
+            
+            // Camera position
+            camera.position.set(0, 2, 8);
+            camera.lookAt(0, 0, 0);
+
+            // Controls
+            let controls = null;
+            if (THREE.OrbitControls) {
+                controls = new THREE.OrbitControls(camera, renderer.domElement);
+            } else if (window.OrbitControls) {
+                controls = new window.OrbitControls(camera, renderer.domElement);
+            }
+            if (controls) {
+                controls.enableDamping = true;
+                controls.dampingFactor = 0.05;
+                controls.minDistance = 4;
+                controls.maxDistance = 20;
+                controls.maxPolarAngle = Math.PI / 2 + 0.3;
+            }
+            
+            return { scene, camera, renderer, controls };
+        }
+
+        // Render 3D cubes - 移除多余投影
+        function render3DCubes(sceneData, cubes) {
+            if (!sceneData || !sceneData.scene) return;
+            
+            // Clear existing cubes only (不清除投影)
+            const objectsToRemove = [];
+            sceneData.scene.traverse((child) => {
+                if (child.userData && child.userData.isCube) {
+                    objectsToRemove.push(child);
+                }
+            });
+            objectsToRemove.forEach(obj => sceneData.scene.remove(obj));
+            
+            // Add cubes with improved materials
+            cubes.forEach((cube, index) => {
+                const group = new THREE.Group();
+                
+                const geometry = new THREE.BoxGeometry(0.85, 0.85, 0.85);
+                const hue = (30 + index * 15) % 360;
+                const color = new THREE.Color();
+                color.setHSL(hue / 360, 0.8, 0.65); // 增加饱和度和亮度
+                const material = new THREE.MeshPhongMaterial({ 
+                    color: color,
+                    shininess: 100,
+                    specular: 0x444444,
+                    transparent: false // 确保不透明
+                });
+                const mesh = new THREE.Mesh(geometry, material);
+                mesh.castShadow = true;
+                mesh.receiveShadow = true;
+                
+                const edges = new THREE.EdgesGeometry(geometry);
+                const lineMaterial = new THREE.LineBasicMaterial({ 
+                    color: 0x222222, 
+                    linewidth: 2
+                });
+                const wireframe = new THREE.LineSegments(edges, lineMaterial);
+                
+                group.add(mesh);
+                group.add(wireframe);
+                group.position.set(cube.x - 1, cube.y, cube.z - 1);
+                group.userData.isCube = true;
+                
+                sceneData.scene.add(group);
+            });
+            
+            if (sceneData.controls) {
+                sceneData.controls.update();
+            }
+            
+            sceneData.renderer.render(sceneData.scene, sceneData.camera);
+        }
+
+        // Animation loop
+        function animate(sceneData) {
+            requestAnimationFrame(() => animate(sceneData));
+            
+            if (sceneData.controls) {
+                sceneData.controls.update();
+            }
+            
+            sceneData.renderer.render(sceneData.scene, sceneData.camera);
+        }
+
+        // Learning step functions
+        function updateLearningStep() {
+            const step = learningSteps[currentStep];
+            
+            // Update step indicator
+            document.querySelectorAll('.step').forEach((el, index) => {
+                el.classList.remove('active', 'completed');
+                if (index === currentStep) {
+                    el.classList.add('active');
+                } else if (index < currentStep) {
+                    el.classList.add('completed');
+                }
+            });
+            
+            document.querySelectorAll('.step-connector').forEach((el, index) => {
+                el.classList.remove('completed');
+                if (index < currentStep) {
+                    el.classList.add('completed');
+                }
+            });
+            
+            // Update content
+            document.getElementById('step-title').textContent = step.title;
+            document.getElementById('step-description').textContent = step.description;
+            document.getElementById('explanation-text').textContent = step.explanation;
+            
+            // Update views
+            drawView(document.getElementById('front-view'), step.frontView, step.highlightView === 'front');
+            drawView(document.getElementById('top-view'), step.topView, step.highlightView === 'top');
+            drawView(document.getElementById('side-view'), step.sideView, step.highlightView === 'side');
+
+            // Only show one view per step (front/top/side)
+            const frontContainer = document.getElementById('container-front');
+            const topContainer = document.getElementById('container-top');
+            const sideContainer = document.getElementById('container-side');
+            const activeTitle = document.getElementById('active-view-title');
+            if (frontContainer && topContainer && sideContainer) {
+                // Toggle visibility
+                const showFront = step.highlightView === 'front';
+                const showTop = step.highlightView === 'top';
+                const showSide = step.highlightView === 'side';
+
+                frontContainer.style.display = showFront ? '' : 'none';
+                topContainer.style.display = showTop ? '' : 'none';
+                sideContainer.style.display = showSide ? '' : 'none';
+
+                // Ensure the visible card spans full width of the inner grid
+                frontContainer.style.gridColumn = showFront ? '1 / -1' : '';
+                topContainer.style.gridColumn = showTop ? '1 / -1' : '';
+                sideContainer.style.gridColumn = showSide ? '1 / -1' : '';
+
+                // Update right side heading at same level as 3D title
+                if (activeTitle) {
+                    activeTitle.textContent = showFront ? '正面图' : (showTop ? '俯视图' : '侧面图');
+                }
+            }
+            
+            // Update 3D view
+            const cubes = buildCubesFromProjections(step.frontView, step.topView, step.sideView);
+            if (sceneData) {
+                render3DCubes(sceneData, cubes);
+            }
+            
+            // Update navigation
+            document.getElementById('prev-btn').disabled = currentStep === 0;
+            document.getElementById('next-btn').disabled = currentStep === learningSteps.length - 1;
+            document.getElementById('step-info').textContent = `第 ${currentStep + 1} 步，共 ${learningSteps.length} 步`;
+
+            // Make left and right cards equal height and top-aligned
+            requestAnimationFrame(equalizeLearningHeights);
+        }
+
+        // Equalize Learning cards height (3D vs active 2D view)
+        function equalizeLearningHeights() {
+            const leftCard = document.querySelector('.cube-3d-container');
+            const showFront = document.getElementById('container-front')?.style.display !== 'none';
+            const showTop = document.getElementById('container-top')?.style.display !== 'none';
+            const showSide = document.getElementById('container-side')?.style.display !== 'none';
+            const rightCard = showFront ? document.getElementById('container-front')
+                              : showTop ? document.getElementById('container-top')
+                              : document.getElementById('container-side');
+            if (!leftCard || !rightCard) return;
+            leftCard.style.minHeight = '';
+            rightCard.style.minHeight = '';
+            const maxH = Math.max(leftCard.offsetHeight, rightCard.offsetHeight, 300);
+            leftCard.style.minHeight = maxH + 'px';
+            rightCard.style.minHeight = maxH + 'px';
+        }
+
+        function nextStep() {
+            if (currentStep < learningSteps.length - 1) {
+                currentStep++;
+                updateLearningStep();
+            }
+        }
+
+        function prevStep() {
+            if (currentStep > 0) {
+                currentStep--;
+                updateLearningStep();
+            }
+        }
+
+        // Practice functions
+        function updatePracticeQuestion() {
+            const question = practiceQuestions[currentQuestionIndex];
+            
+            document.getElementById('current-question').textContent = currentQuestionIndex + 1;
+            
+            // Draw views
+            drawView(document.querySelector('.practice-front'), question.frontView);
+            drawView(document.querySelector('.practice-top'), question.topView);
+            drawView(document.querySelector('.practice-side'), question.sideView);
+            
+            // Reset UI and show default content
+            document.getElementById('answer').value = '';
+            document.getElementById('answer').disabled = false;
+            document.querySelector('.input-group button').disabled = false;
+            
+            // Show default content and hide results
+            const defaultContent = document.getElementById('default-content');
+            const resultContainer = document.getElementById('result-container');
+            const solutionContainer = document.getElementById('solution-container');
+            const practiceNav = document.getElementById('practice-nav');
+            
+            if (defaultContent) {
+                defaultContent.style.display = 'block';
+                defaultContent.classList.remove('visible');
+                setTimeout(() => {
+                    defaultContent.classList.add('visible', 'animate-fadeInUp');
+                }, 100);
+            }
+            
+            resultContainer.style.display = 'none';
+            resultContainer.innerHTML = '';
+            solutionContainer.style.display = 'none';
+            solutionContainer.classList.remove('visible');
+            practiceNav.style.display = 'none';
+
+            // 使左右卡片等高
+            requestAnimationFrame(equalizePracticeHeights);
+        }
+
+        function submitAnswer() {
+            const userAnswer = parseInt(document.getElementById('answer').value);
+            if (!userAnswer || userAnswer < 1) {
+                const answerInput = document.getElementById('answer');
+                answerInput.classList.add('animate-shake');
+                answerInput.style.borderColor = 'hsl(var(--error))';
+                setTimeout(() => {
+                    answerInput.classList.remove('animate-shake');
+                    answerInput.style.borderColor = '';
+                }, 500);
+                return;
+            }
+
+            // Hide default content
+            const defaultContent = document.getElementById('default-content');
+            if (defaultContent) {
+                defaultContent.style.display = 'none';
+            }
+
+            const question = practiceQuestions[currentQuestionIndex];
+            const cubes = buildCubesFromProjections(question.frontView, question.topView, question.sideView);
+            const correctAnswer = cubes.length;
+            
+            const isCorrect = userAnswer === correctAnswer;
+            
+            const resultContainer = document.getElementById('result-container');
+            resultContainer.style.display = 'block';
+            resultContainer.innerHTML = `
+                <div class="result ${isCorrect ? 'correct' : 'incorrect'} animate-fadeInUp ${isCorrect ? 'animate-glow' : ''}">
+                    ${isCorrect ? 
+                        `<div style="font-size: 2rem; margin-bottom: 0.5rem;"><i data-lucide="trophy"></i></div>
+                         <strong>✓ 回答正确！</strong><br>
+                         <span style="font-size: 0.9rem;">恭喜你掌握了三视图立方体计数的方法！</span>` : 
+                        `<div style="font-size: 1.5rem; margin-bottom: 0.5rem;"><i data-lucide="help-circle"></i></div>
+                         <strong>✗ 回答错误</strong><br>
+                         你的答案：<span style="color: hsl(var(--error)); font-weight: 700;">${userAnswer}</span> 个立方体<br>
+                         正确答案：<span style="color: hsl(var(--success)); font-weight: 700;">${correctAnswer}</span> 个立方体<br>
+                         <span style="font-size: 0.9rem; margin-top: 0.5rem; display: block;"><i data-lucide="lightbulb"></i> 请仔细观察三个视图的对应关系</span>`
+                    }
+                </div>
+                <div style="text-align: center; margin-top: 1.5rem;">
+                    <button class="btn btn-secondary btn-lg hover-lift" onclick="showSolution()">
+                        <i data-lucide="search"></i> 查看解答立体图
+                    </button>
+                </div>
+            `;
+            if (window.lucide && typeof lucide.createIcons === 'function') { lucide.createIcons(); }
+            
+            document.getElementById('answer').disabled = true;
+            document.querySelector('.input-group button').disabled = true;
+            document.getElementById('practice-nav').style.display = 'flex';
+            
+            // Add celebration effect for correct answers
+            if (isCorrect) {
+                setTimeout(() => {
+                    createCelebrationEffect();
+                }, 500);
+            }
+
+            // 更新卡片等高
+            requestAnimationFrame(equalizePracticeHeights);
+        }
+
+        // Add celebration effect
+        function createCelebrationEffect() {
+            const container = document.querySelector('.practice-right');
+            const icons = ['sparkles', 'star', 'sun', 'rocket', 'trophy'];
+            
+            for (let i = 0; i < 15; i++) {
+                const particle = document.createElement('div');
+                const icon = icons[Math.floor(Math.random() * icons.length)];
+                particle.className = 'celebration';
+                particle.innerHTML = `<i data-lucide="${icon}"></i>`;
+                particle.style.position = 'absolute';
+                particle.style.left = Math.random() * 100 + '%';
+                particle.style.top = Math.random() * 100 + '%';
+                particle.style.pointerEvents = 'none';
+                particle.style.animation = 'fadeInUp 0.5s ease-out, fadeOut 1s ease-out 1s forwards';
+                particle.style.zIndex = '1000';
+                
+                container.style.position = 'relative';
+                container.appendChild(particle);
+                if (window.lucide && typeof lucide.createIcons === 'function') { lucide.createIcons(); }
+                
+                setTimeout(() => {
+                    if (particle.parentNode) {
+                        particle.parentNode.removeChild(particle);
+                    }
+                }, 2000);
+            }
+        }
+
+        function showSolution() {
+            const question = practiceQuestions[currentQuestionIndex];
+            const cubes = buildCubesFromProjections(question.frontView, question.topView, question.sideView);
+            
+            const solutionContainer = document.getElementById('solution-container');
+            solutionContainer.style.display = 'block';
+            solutionContainer.classList.add('solution-panel', 'visible', 'animate-fadeInUp');
+            
+            if (practiceSceneData) {
+                render3DCubes(practiceSceneData, cubes);
+            }
+            
+            // Add explanation with enhanced styling
+            if (!solutionContainer.querySelector('.explanation')) {
+                const explanation = document.createElement('div');
+                explanation.className = 'explanation';
+                explanation.style.marginTop = '1rem';
+                explanation.innerHTML = `
+                    <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                        <i data-lucide="lightbulb"></i>
+                        <strong>解答说明</strong>
+                    </div>
+                    <p style="white-space: pre-line; line-height: 1.6;">${question.explanation}</p>
+                `;
+                solutionContainer.appendChild(explanation);
+                if (window.lucide && typeof lucide.createIcons === 'function') { lucide.createIcons(); }
+            }
+
+            // 更新卡片等高
+            requestAnimationFrame(equalizePracticeHeights);
+        }
+
+        function nextQuestion() {
+            if (currentQuestionIndex < practiceQuestions.length - 1) {
+                currentQuestionIndex++;
+            } else {
+                currentQuestionIndex = 0;
+            }
+            updatePracticeQuestion();
+        }
+
+        // 等高函数：让左侧题目卡片和右侧答案卡片高度一致
+        function equalizePracticeHeights() {
+            // 小屏（单列）下不做等高
+            if (window.matchMedia('(max-width: 768px)').matches) {
+                const left0 = document.querySelector('.practice-left');
+                const right0 = document.querySelector('.practice-right');
+                if (left0) left0.style.minHeight = '';
+                if (right0) right0.style.minHeight = '';
+                return;
+            }
+            const left = document.querySelector('.practice-left');
+            const right = document.querySelector('.practice-right');
+            if (!left || !right) return;
+            left.style.minHeight = '';
+            right.style.minHeight = '';
+            const maxH = Math.max(left.offsetHeight, right.offsetHeight, 360);
+            left.style.minHeight = maxH + 'px';
+            right.style.minHeight = maxH + 'px';
+        }
+
+        // 窗口尺寸变化时也保持等高
+        window.addEventListener('resize', () => requestAnimationFrame(equalizePracticeHeights));
+        window.addEventListener('resize', () => requestAnimationFrame(equalizeLearningHeights));
+
+
+        // Initialize application
+        window.addEventListener('load', function() {
+            initBackground();
+            showPage('home');
+            // Initialize Lucide icons once DOM is ready
+            if (window.lucide && typeof lucide.createIcons === 'function') {
+                lucide.createIcons();
+            } else {
+                document.addEventListener('DOMContentLoaded', function() {
+                    if (window.lucide && typeof lucide.createIcons === 'function') {
+                        lucide.createIcons();
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+</html>
