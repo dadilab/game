@@ -1,0 +1,2343 @@
+<html lang="zh-CN"><head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WordMaster - 词汇记忆挑战</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&amp;family=Poppins:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <!-- Tailwind 配置 - 白色极简风格 -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#333333', // 主色调：深灰色
+                        secondary: '#666666', // 次要色：中灰色
+                        accent: '#0066CC', // 强调色：深蓝色
+                        light: '#F9F9F9', // 浅色背景
+                        dark: '#111111', // 深色文本
+                        neutral: '#999999', // 中性色
+                    },
+                    fontFamily: {
+                        sans: ['Poppins', 'Noto Sans SC', 'system-ui', 'sans-serif'],
+                    },
+                    boxShadow: {
+                        'card': '0 2px 8px rgba(0, 0, 0, 0.05)',
+                        'card-hover': '0 4px 12px rgba(0, 0, 0, 0.08)',
+                        'modal': '0 8px 24px rgba(0, 0, 0, 0.1)',
+                    },
+                    animation: {
+                        'fade-in': 'fadeIn 0.5s ease-in-out',
+                        'slide-up': 'slideUp 0.5s ease-out',
+                    },
+                    keyframes: {
+                        fadeIn: {
+                            '0%': { opacity: 0 },
+                            '100%': { opacity: 1 },
+                        },
+                        slideUp: {
+                            '0%': { transform: 'translateY(20px)', opacity: 0 },
+                            '100%': { transform: 'translateY(0)', opacity: 1 },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .content-auto {
+                content-visibility: auto;
+            }
+            .card-flip {
+                perspective: 1000px;
+                transform-style: preserve-3d;
+            }
+            .card-inner {
+                transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+                transform-style: preserve-3d;
+            }
+            .card-front, .card-back {
+                backface-visibility: hidden;
+            }
+            .card-back {
+                transform: rotateY(180deg);
+            }
+            .flipped .card-inner {
+                transform: rotateY(180deg);
+            }
+            .progress-ring-circle {
+                transition: stroke-dashoffset 0.35s;
+                transform: rotate(-90deg);
+                transform-origin: 50% 50%;
+            }
+            /* 自定义平滑过渡 */
+            .btn-hover {
+                transition: all 0.3s ease;
+            }
+            .btn-hover:hover {
+                transform: translateY(-1px);
+                box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+            }
+            /* 线条元素 */
+            .line-element {
+                @apply h-px bg-black opacity-20 my-6;
+            }
+            .vertical-line {
+                @apply w-px bg-black opacity-20 h-full absolute;
+            }
+            .diagonal-line {
+                @apply w-px bg-black opacity-20 absolute transform rotate-45;
+            }
+            /* 卡片悬浮效果 */
+            .card-zoom {
+                transition: transform 0.3s ease, box-shadow 0.3s ease;
+            }
+            .card-zoom:hover {
+                transform: translateY(-5px);
+                box-shadow: var(--tw-shadow-card-hover);
+            }
+            .card-zoom:active {
+                transform: translateY(-3px) scale(0.98);
+                transition: transform 0.1s ease;
+            }
+            /* 类别标签样式 */
+            .category-tag {
+                transition: all 0.2s ease;
+            }
+            .category-tag:hover, .category-tag.active {
+                transform: translateY(-2px);
+                box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            }
+            .category-tag.active {
+                background-color: #1f2937 !important;
+                color: white !important;
+                border-color: #1f2937 !important;
+            }
+
+            /* 强化选中态样式 */
+            button.category-btn.category-tag.active {
+                background-color: #1f2937 !important;
+                color: white !important;
+                border: 1px solid #1f2937 !important;
+            }
+            /* 自定义滚动条 */
+            .custom-scrollbar::-webkit-scrollbar {
+                width: 4px;
+                height: 4px;
+            }
+            .custom-scrollbar::-webkit-scrollbar-track {
+                background: #f1f1f1;
+            }
+            .custom-scrollbar::-webkit-scrollbar-thumb {
+                background: #c1c1c1;
+                border-radius: 2px;
+            }
+            .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+                background: #a1a1a1;
+            }
+        }
+    </style>
+    <style>
+        body {
+            background-color: #FFFFFF;
+            min-height: 100vh;
+            font-weight: 300;
+        }
+        /* 页面切换动画 */
+        .page-transition {
+            transition: opacity 0.3s ease, transform 0.3s ease;
+        }
+        .page-enter {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+        .page-enter-active {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        /* 滚动差分效果 */
+        .scroll-diff {
+            position: relative;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+        /* 自定义鼠标样式 */
+        #custom-cursor {
+            position: fixed;
+            width: 24px;
+            height: 24px;
+            border: 1px solid #000;
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 100;
+            transition: all 0.1s ease;
+            mix-blend-mode: difference;
+            opacity: 0;
+        }
+        /* 高密度布局 */
+        .dense-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1.5rem;
+        }
+        /* 线条装饰 */
+        .decorative-line {
+            position: absolute;
+            background-color: rgba(0, 0, 0, 0.1);
+        }
+    </style>
+</head>
+<body class="font-sans text-dark">
+    <!-- 自定义鼠标 -->
+    <div id="custom-cursor"></div>
+
+    <!-- 顶部导航栏 -->
+    <header class="sticky top-0 z-50 bg-white/95 backdrop-blur-sm border-b border-gray-100">
+        <div class="container mx-auto px-6 py-4 flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <h1 class="text-2xl font-light tracking-wide">WordMaster</h1>
+            </div>
+            <div class="flex items-center gap-4">
+                <div class="hidden md:flex items-center gap-2 text-neutral">
+                    <i class="fa fa-trophy text-accent"></i>
+                    <span id="total-score" class="font-medium">总分: 0</span>
+                </div>
+                <button id="settings-btn" class="p-2.5 rounded-full hover:bg-slate-50 transition-colors">
+                    <i class="fa fa-cog text-neutral"></i>
+                </button>
+                <button id="help-btn" class="p-2.5 rounded-full hover:bg-slate-50 transition-colors">
+                    <i class="fa fa-question text-neutral"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="container mx-auto px-6 py-8">
+        <!-- 欢迎界面 -->
+        <section id="welcome-screen" class="max-w-5xl mx-auto page-transition">
+            <!-- 装饰线条 -->
+            <div class="decorative-line w-1/4 h-px top-20 left-0"></div>
+            <div class="decorative-line w-px h-20 top-20 left-0"></div>
+            <div class="decorative-line w-1/4 h-px bottom-20 right-0"></div>
+            <div class="decorative-line w-px h-20 bottom-20 right-0"></div>
+            
+            <div class="py-16 text-center relative overflow-hidden rounded-3xl mb-12">
+                <!-- 背景装饰图不拦截点击，避免遮挡下面按钮 -->
+                <div class="absolute inset-0 opacity-20 overflow-hidden rounded-3xl pointer-events-none">
+                    <img src="https://p3-flow-imagex-sign.byteimg.com/tos-cn-i-a9rns2rl98/rc/pc/super_tool/f7a4c36d4026497da5c4c3e401430498~tplv-a9rns2rl98-image.image?rcl=202509231417595D031AC791B4189DF405&amp;rk3s=8e244e95&amp;rrcfp=f06b921b&amp;x-expires=1761200289&amp;x-signature=QE6FU9ivpKv9NtEv3%2F0WTRxEWm4%3D" alt="Background" class="object-cover w-full h-full">
+                </div>
+                <div class="mb-8 animate-fade-in relative z-10">
+                <h2 class="text-4xl md:text-5xl font-light mb-6 tracking-wide">词汇记忆挑战</h2>
+                <div class="line-element w-32 mx-auto"></div>
+                <p class="text-lg text-neutral mt-6 mb-12 max-w-2xl mx-auto">通过趣味互动游戏，高效掌握各类英语词汇，提升你的语言能力</p>
+                
+                <!-- 词汇类别选择 -->
+                <div class="bg-white border border-gray-100 rounded-xl p-6 mb-12 max-w-3xl mx-auto">
+                    <h3 class="text-xl font-medium mb-6">选择词汇类别</h3>
+                    <div class="flex flex-wrap justify-center gap-2">
+                        <button class="category-btn category-tag px-4 py-2 bg-gray-800 text-white rounded-lg font-medium active text-sm" data-category="all">
+                            全部类别
+                        </button>
+                        <button class="category-btn category-tag px-4 py-2 bg-white text-gray-800 border border-gray-200 rounded-lg font-medium hover:bg-gray-50 text-sm" data-category="daily">
+                            日常生活
+                        </button>
+                        <button class="category-btn category-tag px-4 py-2 bg-white text-gray-800 border border-gray-200 rounded-lg font-medium hover:bg-gray-50 text-sm" data-category="business">
+                            商务职场
+                        </button>
+                        <button class="category-btn category-tag px-4 py-2 bg-white text-gray-800 border border-gray-200 rounded-lg font-medium hover:bg-gray-50 text-sm" data-category="academic">
+                            学术教育
+                        </button>
+                        <button class="category-btn category-tag px-4 py-2 bg-white text-gray-800 border border-gray-200 rounded-lg font-medium hover:bg-gray-50 text-sm" data-category="travel">
+                            旅游出行
+                        </button>
+                        <button class="category-btn category-tag px-4 py-2 bg-white text-gray-800 border border-gray-200 rounded-lg font-medium hover:bg-gray-50 text-sm" data-category="technology">
+                            科技数码
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12 max-w-4xl mx-auto">
+                    <div id="pairing-card" class="bg-white border border-gray-100 rounded-xl p-8 card-zoom relative overflow-hidden cursor-pointer hover:border-primary transition-all">
+                        <div class="absolute inset-0 opacity-25 overflow-hidden rounded-xl">
+                            <img src="https://p3-flow-imagex-sign.byteimg.com/tos-cn-i-a9rns2rl98/rc/pc/code_assistant/2a4ac751ab8e437f9d1ff2981ada4d6a~tplv-a9rns2rl98-image.image?rcl=202509231425330A93B42E4A72E3B8A210&amp;rk3s=8e244e95&amp;rrcfp=e75484ac&amp;x-expires=1759213533&amp;x-signature=HW2u5yEbQVeN2Wu09Of3ciSW1H0%3D" alt="Background" class="object-cover w-full h-full">
+                        </div>
+                        <div class="relative z-10">
+                        <h3 class="text-xl font-medium mb-3 text-black">单词配对</h3>
+                        <p class="text-neutral text-black">将英文单词与中文释义精准配对，锻炼你的快速反应能力</p>
+                        </div>
+                    </div>
+                    <div id="spelling-card" class="bg-white border border-gray-100 rounded-xl p-8 card-zoom relative overflow-hidden cursor-pointer hover:border-primary transition-all">
+                        <div class="absolute inset-0 opacity-25 overflow-hidden rounded-xl">
+                            <img src="https://p9-flow-imagex-sign.byteimg.com/tos-cn-i-a9rns2rl98/rc/pc/super_tool/27dd5f95443948df96a528bc33faf34c~tplv-a9rns2rl98-image.image?rcl=20250923141115EE8C51C9F65B34A060F9&amp;rk3s=8e244e95&amp;rrcfp=f06b921b&amp;x-expires=1761199951&amp;x-signature=x72DVibJpZa%2FgNGXgogu88XpePg%3D" alt="Background" class="object-cover w-full h-full">
+                        </div>
+                        <div class="relative z-10">
+                        <h3 class="text-xl font-medium mb-3 text-black">拼写练习</h3>
+                        <p class="text-neutral text-black">根据中文提示拼写英文单词，巩固你的拼写记忆</p>
+                        </div>
+                    </div>
+                    <div id="quiz-card" class="bg-white border border-gray-100 rounded-xl p-8 card-zoom relative overflow-hidden cursor-pointer hover:border-primary transition-all">
+                        <div class="absolute inset-0 opacity-25 overflow-hidden rounded-xl">
+                            <img src="https://p3-flow-imagex-sign.byteimg.com/tos-cn-i-a9rns2rl98/rc/pc/super_tool/57511d8a22d44201a3a2c1476474ed9e~tplv-a9rns2rl98-image.image?rcl=20250923141115EE8C51C9F65B34A060F9&amp;rk3s=8e244e95&amp;rrcfp=f06b921b&amp;x-expires=1761199962&amp;x-signature=kfKX2MwyuIjiLTpnwfs%2BAi9H468%3D" alt="Background" class="object-cover w-full h-full">
+                        </div>
+                        <div class="relative z-10">
+                        <h3 class="text-xl font-medium mb-3 text-black">快速测验</h3>
+                        <p class="text-neutral text-black">限时答题挑战，测试你的知识掌握速度和准确率</p>
+                        </div>
+                    </div>
+                </div>
+
+
+                <div>
+                    <button id="view-vocabulary" class="text-accent hover:text-accent/80 flex items-center gap-2 mx-auto text-lg font-medium">
+                        <i class="fa fa-book"></i>
+                        <span>查看完整词汇表</span>
+                    </button>
+                </div>
+            </div>
+        </div></section>
+
+        <!-- 单词配对游戏 -->
+        <section id="pairing-game" class="hidden page-transition">
+            <div class="flex justify-between items-center mb-8">
+                <button id="back-from-pairing" class="flex items-center gap-2 text-neutral hover:text-dark transition-colors">
+                    <i class="fa fa-arrow-left"></i>
+                    <span>返回主页</span>
+                </button>
+                <div class="flex items-center gap-6">
+                    <div class="flex items-center gap-2 text-primary font-medium">
+                        <i class="fa fa-check-circle"></i>
+                        <span id="pairing-matches">已匹配: 0</span>
+                    </div>
+                    <div class="flex items-center gap-2 text-neutral font-medium">
+                        <i class="fa fa-clock-o"></i>
+                        <span id="pairing-time">时间: 0s</span>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-white border border-gray-100 rounded-xl p-8 mb-8">
+                <h2 class="text-3xl font-light mb-4">单词配对挑战</h2>
+                <div class="line-element w-24"></div>
+                <p class="text-neutral mt-6 mb-8">找出英文单词与对应的中文释义，考验你的词汇记忆</p>
+                <div id="pairing-board" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3 md:gap-4">
+                    <!-- 配对卡片将通过JS动态生成 -->
+                </div>
+            </div>
+            <div id="pairing-results" class="hidden bg-white border border-gray-100 rounded-xl p-8 text-center">
+                <div class="mb-6">
+                    <i class="fa fa-trophy text-6xl text-accent"></i>
+                </div>
+                <h3 class="text-3xl font-light mb-4">恭喜完成挑战!</h3>
+                <p class="text-neutral mb-3 text-lg">你用了 <span id="final-pairing-time" class="font-medium">0</span> 秒完成了所有配对</p>
+                <p class="text-neutral mb-8 text-lg">获得了 <span id="pairing-score" class="font-medium text-accent">0</span> 分</p>
+                <div class="flex justify-center gap-6">
+                    <button id="play-pairing-again" class="px-8 py-3 bg-white text-primary border border-gray-200 rounded-lg font-medium hover:bg-gray-50 transition-colors">
+                        再玩一次
+                    </button>
+                    <button id="back-to-home-from-pairing" class="px-8 py-3 bg-white text-primary border border-gray-200 rounded-lg font-medium hover:bg-gray-50 transition-colors">
+                        返回主页
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- 拼写练习 -->
+        <section id="spelling-game" class="hidden page-transition">
+            <div class="flex justify-between items-center mb-8">
+                <button id="back-from-spelling" class="flex items-center gap-2 text-neutral hover:text-dark transition-colors">
+                    <i class="fa fa-arrow-left"></i>
+                    <span>返回主页</span>
+                </button>
+                <div class="flex items-center gap-6">
+                    <div class="flex items-center gap-2 text-accent font-medium">
+                        <i class="fa fa-check-circle"></i>
+                        <span id="spelling-correct">正确: 0</span>
+                    </div>
+                    <div class="flex items-center gap-2 text-neutral font-medium">
+                        <i class="fa fa-times-circle"></i>
+                        <span id="spelling-wrong">错误: 0</span>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-white border border-gray-100 rounded-xl p-8 mb-8">
+                <h2 class="text-3xl font-light mb-4">拼写练习</h2>
+                <div class="line-element w-24"></div>
+                <p class="text-neutral mt-6 mb-8">根据中文提示，正确拼写出对应的英文单词</p>
+                <div class="mb-10">
+                    <div class="bg-gray-50 rounded-xl p-6 mb-6">
+                        <h3 class="text-xl font-medium mb-3">中文提示:</h3>
+                        <p id="spelling-hint" class="text-2xl font-light">苹果</p>
+                    </div>
+                    <div class="mb-6">
+                        <label for="spelling-input" class="block text-sm font-medium text-neutral mb-3">请输入英文单词:</label>
+                        <div class="flex gap-3">
+                            <input type="text" id="spelling-input" class="flex-1 px-5 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-accent/30 focus:border-accent outline-none transition-all text-lg" placeholder="在此输入...">
+                            <button id="check-spelling" class="px-6 py-3 bg-white text-primary border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors font-medium">
+                                检查
+                            </button>
+                        </div>
+                    </div>
+                    <div id="spelling-feedback" class="hidden p-5 rounded-lg mb-6">
+                        <!-- 反馈信息将通过JS动态生成 -->
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <div class="font-medium text-neutral">
+                            <span>单词进度: <span id="spelling-current">1</span>/<span id="spelling-total">0</span></span>
+                        </div>
+                        <button id="next-spelling" class="px-6 py-3 bg-white text-primary border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors font-medium hidden">
+                            下一个
+                        </button>
+                    </div>
+                </div>
+                <div class="w-full bg-gray-100 rounded-full h-2 mb-4">
+                    <div id="spelling-progress" class="bg-accent h-2 rounded-full" style="width: 0%"></div>
+                </div>
+            </div>
+            <div id="spelling-results" class="hidden bg-white border border-gray-100 rounded-xl p-8 text-center">
+                <div class="mb-6">
+                    <i class="fa fa-check-circle text-6xl text-accent"></i>
+                </div>
+                <h3 class="text-3xl font-light mb-4">练习完成!</h3>
+                <p class="text-neutral mb-3 text-lg">总单词数: <span id="total-spelling-words" class="font-medium">0</span></p>
+                <p class="text-neutral mb-3 text-lg">正确: <span id="final-spelling-correct" class="font-medium text-accent">0</span></p>
+                <p class="text-neutral mb-3 text-lg">错误: <span id="final-spelling-wrong" class="font-medium text-neutral">0</span></p>
+                <p class="text-neutral mb-8 text-lg">正确率: <span id="spelling-accuracy" class="font-medium">0%</span></p>
+                <div class="mb-8">
+                    <h4 class="font-medium text-xl mb-4">错误单词回顾:</h4>
+                    <div id="misspelled-words" class="flex flex-wrap gap-3 justify-center">
+                        <!-- 错误单词将通过JS动态生成 -->
+                    </div>
+                </div>
+                <div class="flex justify-center gap-6">
+                    <button id="play-spelling-again" class="px-8 py-3 bg-white text-primary border border-gray-200 rounded-lg font-medium hover:bg-gray-50 transition-colors">
+                        再练一次
+                    </button>
+                    <button id="back-to-home-from-spelling" class="px-8 py-3 bg-white text-primary border border-gray-200 rounded-lg font-medium hover:bg-gray-50 transition-colors">
+                        返回主页
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- 快速测验 -->
+        <section id="quiz-game" class="hidden page-transition">
+            <div class="flex justify-between items-center mb-8">
+                <button id="back-from-quiz" class="flex items-center gap-2 text-neutral hover:text-dark transition-colors">
+                    <i class="fa fa-arrow-left"></i>
+                    <span>返回主页</span>
+                </button>
+                <div class="flex items-center gap-6">
+                    <div class="relative w-16 h-16">
+                        <svg class="w-full h-full" viewBox="0 0 36 36">
+                            <circle cx="18" cy="18" r="16" fill="none" stroke="#F1F5F9" stroke-width="2"></circle>
+                            <circle id="quiz-timer-circle" class="progress-ring-circle w-full h-full" cx="18" cy="18" r="16" fill="none" stroke="#333333" stroke-width="2" stroke-dasharray="100" stroke-dashoffset="0"></circle>
+                        </svg>
+                        <span id="quiz-timer" class="absolute inset-0 flex items-center justify-center text-lg font-medium">15s</span>
+                    </div>
+                    <div class="flex items-center gap-2 text-accent font-medium">
+                        <i class="fa fa-star"></i>
+                        <span id="quiz-score">得分: 0</span>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-white border border-gray-100 rounded-xl p-8 mb-8">
+                <h2 class="text-3xl font-light mb-4">快速测验</h2>
+                <div class="line-element w-24"></div>
+                <p class="text-neutral mt-6 mb-8">在限定时间内选择正确答案，挑战你的记忆速度</p>
+                <div class="mb-10">
+                    <div class="bg-gray-50 rounded-xl p-6 mb-8">
+                        <h3 class="text-xl font-medium mb-3">问题 <span id="quiz-current">1</span>/<span id="quiz-total">0</span>:</h3>
+                        <p id="quiz-question" class="text-2xl font-light">"苹果"对应的英文是什么?</p>
+                    </div>
+                    <div id="quiz-options" class="space-y-4 mb-8">
+                        <!-- 选项将通过JS动态生成 -->
+                    </div>
+                    <div id="quiz-feedback" class="hidden p-5 rounded-lg mb-6">
+                        <!-- 反馈信息将通过JS动态生成 -->
+                    </div>
+                    <button id="next-quiz" class="px-8 py-3 bg-white text-primary border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors font-medium hidden w-full">
+                        下一题
+                    </button>
+                </div>
+                <div class="w-full bg-gray-100 rounded-full h-2 mb-4">
+                    <div id="quiz-progress" class="bg-accent h-2 rounded-full" style="width: 0%"></div>
+                </div>
+            </div>
+            <div id="quiz-results" class="hidden bg-white border border-gray-100 rounded-xl p-8 text-center">
+                <div class="mb-6">
+                    <i class="fa fa-bar-chart text-6xl text-accent"></i>
+                </div>
+                <h3 class="text-3xl font-light mb-4">测验完成!</h3>
+                <p class="text-neutral mb-3 text-lg">总题数: <span id="total-quiz-questions" class="font-medium">0</span></p>
+                <p class="text-neutral mb-3 text-lg">正确: <span id="final-quiz-correct" class="font-medium text-accent">0</span></p>
+                <p class="text-neutral mb-3 text-lg">错误: <span id="final-quiz-wrong" class="font-medium text-neutral">0</span></p>
+                <p class="text-neutral mb-8 text-lg">最终得分: <span id="final-quiz-score" class="font-medium text-accent">0</span></p>
+                <div class="flex justify-center gap-6">
+                    <button id="play-quiz-again" class="px-8 py-3 bg-white text-primary border border-gray-200 rounded-lg font-medium hover:bg-gray-50 transition-colors">
+                        再测一次
+                    </button>
+                    <button id="back-to-home-from-quiz" class="px-8 py-3 bg-white text-primary border border-gray-200 rounded-lg font-medium hover:bg-gray-50 transition-colors">
+                        返回主页
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- 词汇表 -->
+        <section id="vocabulary-list" class="hidden page-transition">
+            <div class="flex justify-between items-center mb-8">
+                <button id="back-from-vocab" class="flex items-center gap-2 text-neutral hover:text-dark transition-colors">
+                    <i class="fa fa-arrow-left"></i>
+                    <span>返回主页</span>
+                </button>
+                <div class="relative">
+                    <input type="text" id="vocab-search" class="pl-12 pr-4 py-3 w-80 border border-gray-200 rounded-lg focus:ring-2 focus:ring-accent/30 focus:border-accent outline-none transition-all" placeholder="搜索词汇...">
+                    <i class="fa fa-search absolute left-4 top-1/2 -translate-y-1/2 text-neutral"></i>
+                </div>
+            </div>
+            <div class="bg-white border border-gray-100 rounded-xl p-8">
+                <h2 class="text-3xl font-light mb-8">词汇表</h2>
+                <div class="mb-8">
+                    <div class="flex flex-wrap gap-3 mb-6">
+                        <button class="vocab-filter px-5 py-2.5 bg-primary text-white rounded-lg text-sm font-medium" data-category="all">全部</button>
+                        <button class="vocab-filter px-5 py-2.5 bg-white text-gray-800 border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors" data-category="daily">日常生活</button>
+                        <button class="vocab-filter px-5 py-2.5 bg-white text-gray-800 border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors" data-category="business">商务职场</button>
+                        <button class="vocab-filter px-5 py-2.5 bg-white text-gray-800 border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors" data-category="academic">学术教育</button>
+                        <button class="vocab-filter px-5 py-2.5 bg-white text-gray-800 border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors" data-category="travel">旅游出行</button>
+                        <button class="vocab-filter px-5 py-2.5 bg-white text-gray-800 border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors" data-category="technology">科技数码</button>
+                        <button id="add-custom-vocab-btn" class="vocab-filter px-5 py-2.5 bg-accent text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors flex items-center gap-2">
+                            <i class="fa fa-plus"></i> 添加词汇
+                        </button>
+                    </div>
+                </div>
+                <div class="overflow-x-auto custom-scrollbar">
+                    <table class="w-full">
+                        <thead>
+                            <tr class="border-b border-gray-200">
+                                <th class="text-left py-4 px-6 font-medium text-neutral text-lg">英文单词</th>
+                                <th class="text-left py-4 px-6 font-medium text-neutral text-lg">中文释义</th>
+                                <th class="text-left py-4 px-6 font-medium text-neutral text-lg">类别</th>
+                                <th class="text-left py-4 px-6 font-medium text-neutral text-lg">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="vocab-table-body">
+                            <!-- 词汇表内容将通过JS动态生成 -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- 帮助模态框 -->
+        <div id="help-modal" class="fixed inset-0 bg-black/50 z-50 hidden items-center justify-center p-4">
+            <div class="bg-white border border-gray-100 rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-modal">
+                <div class="p-6 border-b border-gray-200 flex justify-between items-center">
+                    <h3 class="text-2xl font-light">游戏帮助</h3>
+                    <button id="close-help" class="text-neutral hover:text-dark p-2 rounded-full hover:bg-gray-50">
+                        <i class="fa fa-times text-xl"></i>
+                    </button>
+                </div>
+                <div class="p-8">
+                    <div class="mb-8">
+                        <h4 class="font-medium text-xl mb-3">单词配对</h4>
+                        <p class="text-neutral mb-3">在这个模式中，你需要将英文单词与对应的中文释义进行配对。</p>
+                        <p class="text-neutral">点击卡片翻牌，找到匹配的英文和中文对，用时越短得分越高。</p>
+                    </div>
+                    <div class="mb-8">
+                        <h4 class="font-medium text-xl mb-3">拼写练习</h4>
+                        <p class="text-neutral mb-3">根据中文提示，在输入框中输入正确的英文单词。</p>
+                        <p class="text-neutral">系统会自动检查你的拼写并给出反馈，完成所有单词后可以查看错误记录。</p>
+                    </div>
+                    <div class="mb-8">
+                        <h4 class="font-medium text-xl mb-3">快速测验</h4>
+                        <p class="text-neutral mb-3">每个问题有15秒的回答时间，从选项中选择正确的答案。</p>
+                        <p class="text-neutral">回答越快，得分越高；超时未答将视为错误。</p>
+                    </div>
+                    <div>
+                        <h4 class="font-medium text-xl mb-3">词汇表</h4>
+                        <p class="text-neutral">你可以在词汇表中查看所有单词，并按类别筛选或搜索特定词汇。</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 设置模态框 -->
+        <div id="settings-modal" class="fixed inset-0 bg-black/50 z-50 hidden items-center justify-center p-4">
+            <div class="bg-white border border-gray-100 rounded-xl max-w-md w-full shadow-modal">
+                <div class="p-6 border-b border-gray-200 flex justify-between items-center">
+                    <h3 class="text-2xl font-light">设置</h3>
+                    <button id="close-settings" class="text-neutral hover:text-dark p-2 rounded-full hover:bg-gray-50">
+                        <i class="fa fa-times text-xl"></i>
+                    </button>
+                </div>
+                <div class="p-8">
+                    <div class="mb-6">
+                        <label class="block text-sm font-medium text-neutral mb-3">游戏难度</label>
+                        <select id="game-difficulty" class="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-accent/30 focus:border-accent outline-none">
+                            <option value="easy">简单 (较少词汇)</option>
+                            <option value="medium" selected="">中等 (全部词汇)</option>
+                            <option value="hard">困难 (包含相似词汇干扰)</option>
+                        </select>
+                    </div>
+                    <div class="mb-6">
+                        <label class="block text-sm font-medium text-neutral mb-3">快速测验时间</label>
+                        <select id="quiz-time-limit" class="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-accent/30 focus:border-accent outline-none">
+                            <option value="10">10秒/题</option>
+                            <option value="15" selected="">15秒/题</option>
+                            <option value="20">20秒/题</option>
+                            <option value="30">30秒/题</option>
+                        </select>
+                    </div>
+                    <div class="mb-8">
+                        <label class="flex items-center gap-3">
+                            <input type="checkbox" id="sound-effects" class="rounded text-accent focus:ring-accent w-5 h-5" checked="">
+                            <span class="text-sm text-neutral">启用音效</span>
+                        </label>
+                    </div>
+                    <button id="save-settings" class="w-full py-3 bg-white text-primary border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors font-medium">
+                        保存设置
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 添加自定义词汇模态框 -->
+        <div id="add-vocab-modal" class="fixed inset-0 bg-black/50 z-50 hidden items-center justify-center p-4">
+            <div class="bg-white border border-gray-100 rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-modal">
+                <div class="p-6 border-b border-gray-200 flex justify-between items-center">
+                    <h3 class="text-2xl font-light text-accent">添加自定义词汇</h3>
+                    <button id="close-add-vocab-modal" class="text-neutral hover:text-dark p-2 rounded-full hover:bg-gray-50">
+                        <i class="fa fa-times text-xl"></i>
+                    </button>
+                </div>
+                <div class="p-8">
+                    <form id="custom-vocab-form" class="space-y-6">
+                        <!-- 英文单词和中文释义 -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="space-y-2">
+                                <label for="custom-english" class="block text-sm font-medium text-neutral">英文单词 <span class="text-accent">*</span></label>
+                                <input type="text" id="custom-english" name="custom-english" class="w-full px-5 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-accent/30 focus:border-accent outline-none transition-all" placeholder="输入英文单词" required="">
+                            </div>
+                            <div class="space-y-2">
+                                <label for="custom-chinese" class="block text-sm font-medium text-neutral">中文释义 <span class="text-accent">*</span></label>
+                                <input type="text" id="custom-chinese" name="custom-chinese" class="w-full px-5 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-accent/30 focus:border-accent outline-none transition-all" placeholder="输入中文释义" required="">
+                            </div>
+                        </div>
+
+                        <!-- 定义描述 -->
+                        <div class="space-y-2">
+                            <label for="custom-definition" class="block text-sm font-medium text-neutral">定义描述</label>
+                            <textarea id="custom-definition" name="custom-definition" class="w-full px-5 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-accent/30 focus:border-accent outline-none transition-all" placeholder="输入详细定义" rows="3"></textarea>
+                        </div>
+
+                        <!-- 词汇类别 -->
+                        <div class="space-y-2">
+                            <label class="block text-sm font-medium text-neutral">词汇类别</label>
+                            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
+                                <label class="flex flex-col items-center justify-center p-5 border-2 border-gray-200 rounded-xl cursor-pointer hover:border-accent/50 transition-all category-option" data-category="daily">
+                                    <input type="radio" name="custom-category" value="daily" class="hidden" checked="">
+                                    <div class="w-14 h-14 bg-gray-50 rounded-full flex items-center justify-center mb-3">
+                                        <i class="fa fa-home text-primary text-xl"></i>
+                                    </div>
+                                    <span class="text-sm font-medium">日常生活</span>
+                                </label>
+                                <label class="flex flex-col items-center justify-center p-5 border-2 border-gray-200 rounded-xl cursor-pointer hover:border-accent/50 transition-all category-option" data-category="business">
+                                    <input type="radio" name="custom-category" value="business" class="hidden">
+                                    <div class="w-14 h-14 bg-gray-50 rounded-full flex items-center justify-center mb-3">
+                                        <i class="fa fa-briefcase text-primary text-xl"></i>
+                                    </div>
+                                    <span class="text-sm font-medium">商务职场</span>
+                                </label>
+                                <label class="flex flex-col items-center justify-center p-5 border-2 border-gray-200 rounded-xl cursor-pointer hover:border-accent/50 transition-all category-option" data-category="academic">
+                                    <input type="radio" name="custom-category" value="academic" class="hidden">
+                                    <div class="w-14 h-14 bg-gray-50 rounded-full flex items-center justify-center mb-3">
+                                        <i class="fa fa-graduation-cap text-primary text-xl"></i>
+                                    </div>
+                                    <span class="text-sm font-medium">学术教育</span>
+                                </label>
+                                <label class="flex flex-col items-center justify-center p-5 border-2 border-gray-200 rounded-xl cursor-pointer hover:border-accent/50 transition-all category-option" data-category="travel">
+                                    <input type="radio" name="custom-category" value="travel" class="hidden">
+                                    <div class="w-14 h-14 bg-gray-50 rounded-full flex items-center justify-center mb-3">
+                                        <i class="fa fa-plane text-primary text-xl"></i>
+                                    </div>
+                                    <span class="text-sm font-medium">旅游出行</span>
+                                </label>
+                                <label class="flex flex-col items-center justify-center p-5 border-2 border-gray-200 rounded-xl cursor-pointer hover:border-accent/50 transition-all category-option" data-category="technology">
+                                    <input type="radio" name="custom-category" value="technology" class="hidden">
+                                    <div class="w-14 h-14 bg-gray-50 rounded-full flex items-center justify-center mb-3">
+                                        <i class="fa fa-microchip text-primary text-xl"></i>
+                                    </div>
+                                    <span class="text-sm font-medium">科技数码</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- 操作按钮 -->
+                        <div class="flex justify-between items-center pt-6">
+                            <div class="text-sm text-neutral">
+                                <i class="fa fa-info-circle mr-1"></i>
+                                <span>带 <span class="text-accent">*</span> 的为必填项</span>
+                            </div>
+                            <div class="flex gap-4">
+                                <button type="button" id="reset-form" class="px-6 py-3 bg-white text-primary border border-gray-200 rounded-lg font-medium hover:bg-gray-50 transition-colors">
+                                    重置
+                                </button>
+                                <button type="submit" class="px-8 py-3 bg-white text-primary border border-gray-200 rounded-lg font-medium hover:bg-gray-50 transition-colors flex items-center gap-2">
+                                    <i class="fa fa-plus"></i>
+                                    添加词汇
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- 删除确认模态框 -->
+        <div id="delete-confirm-modal" class="fixed inset-0 bg-black/50 z-50 hidden items-center justify-center p-4">
+            <div class="bg-white border border-gray-100 rounded-xl max-w-md w-full shadow-modal">
+                <div class="p-6 border-b border-gray-200 flex justify-between items-center">
+                    <h3 class="text-2xl font-light text-accent flex items-center gap-3">
+                        <i class="fa fa-exclamation-triangle"></i>
+                        确认删除
+                    </h3>
+                    <button id="close-delete-confirm" class="text-neutral hover:text-dark p-2 rounded-full hover:bg-gray-50">
+                        <i class="fa fa-times text-xl"></i>
+                    </button>
+                </div>
+                <div class="p-8">
+                    <div class="mb-8">
+                        <p class="text-lg text-neutral mb-6">确定要删除词汇 <span id="delete-word-display" class="font-medium text-dark"></span> 吗？</p>
+                        <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                            <p class="text-neutral text-sm flex items-center gap-2">
+                                <i class="fa fa-info-circle"></i>
+                                <span>此操作不可撤销，删除后将无法恢复。</span>
+                            </p>
+                        </div>
+                    </div>
+                    <div class="flex gap-4">
+                        <button id="cancel-delete" class="flex-1 py-3 bg-white text-primary border border-gray-200 rounded-lg font-medium hover:bg-gray-50 transition-colors">
+                            取消
+                        </button>
+                        <button id="confirm-delete" class="flex-1 py-3 bg-accent text-white rounded-lg font-medium hover:bg-blue-700 transition-colors flex items-center justify-center gap-2">
+                            <i class="fa fa-trash"></i>
+                            确认删除
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <footer class="bg-white mt-16 py-8 border-t border-gray-100">
+        <div class="container mx-auto px-6 text-center text-neutral text-sm">
+            <p class="font-medium">WordMaster - 词汇记忆挑战 © 2025</p>
+            <p class="mt-2">通过趣味互动游戏，高效掌握各类英语词汇</p>
+        </div>
+    </footer>
+
+    <script>
+        // 通用词汇数据
+        const vocabularyData = [
+            // 日常生活类
+            { 
+                english: "Apple", 
+                chinese: "苹果", 
+                definition: "A round fruit with red or green skin and firm white flesh",
+                category: "daily"
+            },
+            { 
+                english: "Banana", 
+                chinese: "香蕉", 
+                definition: "A long curved fruit which grows in clusters and has soft pulpy flesh and yellow skin when ripe",
+                category: "daily"
+            },
+            { 
+                english: "Orange", 
+                chinese: "橙子", 
+                definition: "A round juicy citrus fruit with a tough bright reddish-yellow rind",
+                category: "daily"
+            },
+            { 
+                english: "House", 
+                chinese: "房子", 
+                definition: "A building for human habitation, especially one that is lived in by a family or small group of people",
+                category: "daily"
+            },
+            { 
+                english: "Car", 
+                chinese: "汽车", 
+                definition: "A road vehicle, typically with four wheels, powered by an internal combustion engine or electric motor and able to carry a small number of people",
+                category: "daily"
+            },
+            { 
+                english: "Book", 
+                chinese: "书", 
+                definition: "A written or printed work consisting of pages glued or sewn together along one side and bound in covers",
+                category: "daily"
+            },
+            { 
+                english: "Computer", 
+                chinese: "电脑", 
+                definition: "An electronic device for storing and processing data, typically in binary form, according to instructions given to it in a variable program",
+                category: "daily"
+            },
+            { 
+                english: "Phone", 
+                chinese: "电话", 
+                definition: "A device that converts sound into electrical signals that can be transmitted to other similar devices and then converts received signals back into sound",
+                category: "daily"
+            },
+            { 
+                english: "Television", 
+                chinese: "电视", 
+                definition: "A system for transmitting visual images and sound that are reproduced on screens, chiefly used to broadcast programs for entertainment, information, and education",
+                category: "daily"
+            },
+            { 
+                english: "Refrigerator", 
+                chinese: "冰箱", 
+                definition: "An appliance or compartment that is artificially kept cool and used to store food and drink",
+                category: "daily"
+            },
+            
+            // 商务职场类
+            { 
+                english: "Meeting", 
+                chinese: "会议", 
+                definition: "An assembly of people for a particular purpose, especially for formal discussion",
+                category: "business"
+            },
+            { 
+                english: "Presentation", 
+                chinese: "演示", 
+                definition: "The giving of something to someone, especially as part of a formal ceremony",
+                category: "business"
+            },
+            { 
+                english: "Negotiation", 
+                chinese: "谈判", 
+                definition: "Discussion aimed at reaching an agreement",
+                category: "business"
+            },
+            { 
+                english: "Contract", 
+                chinese: "合同", 
+                definition: "A written or spoken agreement, especially one concerning employment, sales, or tenancy, that is intended to be enforceable by law",
+                category: "business"
+            },
+            { 
+                english: "Deadline", 
+                chinese: "截止日期", 
+                definition: "The latest time or date by which something should be completed",
+                category: "business"
+            },
+            { 
+                english: "Budget", 
+                chinese: "预算", 
+                definition: "An estimate of income and expenditure for a set period of time",
+                category: "business"
+            },
+            { 
+                english: "Investment", 
+                chinese: "投资", 
+                definition: "The action or process of investing money for profit or material result",
+                category: "business"
+            },
+            { 
+                english: "Marketing", 
+                chinese: "市场营销", 
+                definition: "The action or business of promoting and selling products or services, including market research and advertising",
+                category: "business"
+            },
+            { 
+                english: "Strategy", 
+                chinese: "战略", 
+                definition: "A plan of action designed to achieve a long-term or overall aim",
+                category: "business"
+            },
+            { 
+                english: "Networking", 
+                chinese: "人脉网络", 
+                definition: "The action or process of interacting with others to exchange information and develop professional or social contacts",
+                category: "business"
+            },
+            
+            // 学术教育类
+            { 
+                english: "University", 
+                chinese: "大学", 
+                definition: "An educational institution designed for instruction, examination, or both, of students in many branches of advanced learning, conferring degrees in various faculties",
+                category: "academic"
+            },
+            { 
+                english: "Professor", 
+                chinese: "教授", 
+                definition: "A teacher of the highest rank in a college or university",
+                category: "academic"
+            },
+            { 
+                english: "Student", 
+                chinese: "学生", 
+                definition: "A person who is studying at a school or college",
+                category: "academic"
+            },
+            { 
+                english: "Lecture", 
+                chinese: "讲座", 
+                definition: "An educational talk to an audience, especially one of students in a university",
+                category: "academic"
+            },
+            { 
+                english: "Seminar", 
+                chinese: "研讨会", 
+                definition: "A conference or other meeting for discussion or training",
+                category: "academic"
+            },
+            { 
+                english: "Thesis", 
+                chinese: "论文", 
+                definition: "A statement or theory that is put forward as a premise to be maintained or proved",
+                category: "academic"
+            },
+            { 
+                english: "Research", 
+                chinese: "研究", 
+                definition: "The systematic investigation into and study of materials and sources in order to establish facts and reach new conclusions",
+                category: "academic"
+            },
+            { 
+                english: "Library", 
+                chinese: "图书馆", 
+                definition: "A building or room containing collections of books, periodicals, and sometimes films and recorded music for people to read, borrow, or refer to",
+                category: "academic"
+            },
+            { 
+                english: "Examination", 
+                chinese: "考试", 
+                definition: "A detailed inspection or study",
+                category: "academic"
+            },
+            { 
+                english: "Graduation", 
+                chinese: "毕业", 
+                definition: "The receiving or conferring of an academic degree or diploma",
+                category: "academic"
+            },
+            
+            // 旅游出行类
+            { 
+                english: "Airport", 
+                chinese: "机场", 
+                definition: "A complex of runways and buildings for the takeoff, landing, and maintenance of civil aircraft, with facilities for passengers",
+                category: "travel"
+            },
+            { 
+                english: "Hotel", 
+                chinese: "酒店", 
+                definition: "An establishment providing accommodations, meals, and other services for travelers and tourists",
+                category: "travel"
+            },
+            { 
+                english: "Train", 
+                chinese: "火车", 
+                definition: "A series of connected railway carriages or wagons moved by a locomotive",
+                category: "travel"
+            },
+            { 
+                english: "Ticket", 
+                chinese: "票", 
+                definition: "A piece of paper or card that gives the holder a certain right, especially to enter a place, travel by public transport, or participate in an event",
+                category: "travel"
+            },
+            { 
+                english: "Passport", 
+                chinese: "护照", 
+                definition: "An official document issued by a government, certifying the holder's identity and citizenship and entitling them to travel under its protection to and from foreign countries",
+                category: "travel"
+            },
+            { 
+                english: "Suitcase", 
+                chinese: "行李箱", 
+                definition: "A large rectangular case for clothes and other personal belongings, used when traveling",
+                category: "travel"
+            },
+            { 
+                english: "Guide", 
+                chinese: "导游", 
+                definition: "A person who shows the way to others, especially one employed to show tourists around places of interest",
+                category: "travel"
+            },
+            { 
+                english: "Attraction", 
+                chinese: "景点", 
+                definition: "A place that draws visitors by providing something of interest or pleasure",
+                category: "travel"
+            },
+            { 
+                english: "Journey", 
+                chinese: "旅行", 
+                definition: "An act of traveling from one place to another",
+                category: "travel"
+            },
+            { 
+                english: "Visa", 
+                chinese: "签证", 
+                definition: "An endorsement on a passport indicating that the holder is allowed to enter, leave, or stay for a specified period of time in a country",
+                category: "travel"
+            },
+            
+            // 科技数码类
+            { 
+                english: "Internet", 
+                chinese: "互联网", 
+                definition: "A global computer network providing a variety of information and communication facilities, consisting of interconnected networks using standardized communication protocols",
+                category: "technology"
+            },
+            { 
+                english: "Software", 
+                chinese: "软件", 
+                definition: "The programs and other operating information used by a computer",
+                category: "technology"
+            },
+            { 
+                english: "Hardware", 
+                chinese: "硬件", 
+                definition: "The physical components of a computer",
+                category: "technology"
+            },
+            { 
+                english: "Algorithm", 
+                chinese: "算法", 
+                definition: "A process or set of rules to be followed in calculations or other problem-solving operations, especially by a computer",
+                category: "technology"
+            },
+            { 
+                english: "Artificial Intelligence", 
+                chinese: "人工智能", 
+                definition: "The theory and development of computer systems able to perform tasks that normally require human intelligence",
+                category: "technology"
+            },
+            { 
+                english: "Database", 
+                chinese: "数据库", 
+                definition: "A structured set of data held in a computer, especially one that is accessible in various ways",
+                category: "technology"
+            },
+            { 
+                english: "Encryption", 
+                chinese: "加密", 
+                definition: "The process of converting information or data into a code, especially to prevent unauthorized access",
+                category: "technology"
+            },
+            { 
+                english: "Firewall", 
+                chinese: "防火墙", 
+                definition: "A part of a computer system or network that is designed to block unauthorized access while permitting outward communication",
+                category: "technology"
+            },
+            { 
+                english: "Cloud Computing", 
+                chinese: "云计算", 
+                definition: "The practice of using a network of remote servers hosted on the Internet to store, manage, and process data",
+                category: "technology"
+            },
+            { 
+                english: "Virtual Reality", 
+                chinese: "虚拟现实", 
+                definition: "The computer-generated simulation of a three-dimensional image or environment that can be interacted with in a seemingly real or physical way by a person using special electronic equipment",
+                category: "technology"
+            }
+        ];
+        // 游戏状态和设置
+        const gameState = {
+            currentVocabulary: [...vocabularyData],
+            selectedCategory: 'all',
+            settings: {
+                difficulty: 'medium',
+                quizTimeLimit: 15,
+                soundEffects: true
+            },
+            scores: {
+                total: 0,
+                pairing: 0,
+                spelling: 0,
+                quiz: 0
+            },
+            currentGame: null,
+            currentPairing: {
+                matched: 0,
+                flippedCards: [],
+                isProcessing: false,
+                startTime: 0,
+                timer: null
+            },
+            currentSpelling: {
+                index: 0,
+                correct: 0,
+                wrong: 0,
+                misspelled: []
+            },
+            currentQuiz: {
+                index: 0,
+                correct: 0,
+                wrong: 0,
+                score: 0,
+                timer: null,
+                timeRemaining: 0
+            }
+        };
+        // DOM 元素
+        const elements = {
+            // 欢迎界面
+            welcomeScreen: document.getElementById('welcome-screen'),
+            pairingCard: document.getElementById('pairing-card'),
+            spellingCard: document.getElementById('spelling-card'),
+            quizCard: document.getElementById('quiz-card'),
+            viewVocabulary: document.getElementById('view-vocabulary'),
+            totalScore: document.getElementById('total-score'),
+            categoryBtns: document.querySelectorAll('.category-btn'),
+            // 单词配对游戏
+            pairingGame: document.getElementById('pairing-game'),
+            pairingBoard: document.getElementById('pairing-board'),
+            pairingMatches: document.getElementById('pairing-matches'),
+            pairingTime: document.getElementById('pairing-time'),
+            pairingResults: document.getElementById('pairing-results'),
+            finalPairingTime: document.getElementById('final-pairing-time'),
+            pairingScore: document.getElementById('pairing-score'),
+            backFromPairing: document.getElementById('back-from-pairing'),
+            playPairingAgain: document.getElementById('play-pairing-again'),
+            backToHomeFromPairing: document.getElementById('back-to-home-from-pairing'),
+            // 拼写练习
+            spellingGame: document.getElementById('spelling-game'),
+            spellingHint: document.getElementById('spelling-hint'),
+            spellingInput: document.getElementById('spelling-input'),
+            checkSpelling: document.getElementById('check-spelling'),
+            spellingFeedback: document.getElementById('spelling-feedback'),
+            nextSpelling: document.getElementById('next-spelling'),
+            spellingCorrect: document.getElementById('spelling-correct'),
+            spellingWrong: document.getElementById('spelling-wrong'),
+            spellingCurrent: document.getElementById('spelling-current'),
+            spellingTotal: document.getElementById('spelling-total'),
+            spellingProgress: document.getElementById('spelling-progress'),
+            spellingResults: document.getElementById('spelling-results'),
+            totalSpellingWords: document.getElementById('total-spelling-words'),
+            finalSpellingCorrect: document.getElementById('final-spelling-correct'),
+            finalSpellingWrong: document.getElementById('final-spelling-wrong'),
+            spellingAccuracy: document.getElementById('spelling-accuracy'),
+            misspelledWords: document.getElementById('misspelled-words'),
+            backFromSpelling: document.getElementById('back-from-spelling'),
+            playSpellingAgain: document.getElementById('play-spelling-again'),
+            backToHomeFromSpelling: document.getElementById('back-to-home-from-spelling'),
+            // 快速测验
+            quizGame: document.getElementById('quiz-game'),
+            quizQuestion: document.getElementById('quiz-question'),
+            quizOptions: document.getElementById('quiz-options'),
+            quizFeedback: document.getElementById('quiz-feedback'),
+            nextQuiz: document.getElementById('next-quiz'),
+            quizScore: document.getElementById('quiz-score'),
+            quizCurrent: document.getElementById('quiz-current'),
+            quizTotal: document.getElementById('quiz-total'),
+            quizProgress: document.getElementById('quiz-progress'),
+            quizResults: document.getElementById('quiz-results'),
+            totalQuizQuestions: document.getElementById('total-quiz-questions'),
+            finalQuizCorrect: document.getElementById('final-quiz-correct'),
+            finalQuizWrong: document.getElementById('final-quiz-wrong'),
+            finalQuizScore: document.getElementById('final-quiz-score'),
+            backFromQuiz: document.getElementById('back-from-quiz'),
+            playQuizAgain: document.getElementById('play-quiz-again'),
+            backToHomeFromQuiz: document.getElementById('back-to-home-from-quiz'),
+            quizTimer: document.getElementById('quiz-timer'),
+            quizTimerCircle: document.getElementById('quiz-timer-circle'),
+            // 词汇表
+            vocabularyList: document.getElementById('vocabulary-list'),
+            vocabTableBody: document.getElementById('vocab-table-body'),
+            vocabSearch: document.getElementById('vocab-search'),
+            vocabFilters: document.querySelectorAll('.vocab-filter'),
+            backFromVocab: document.getElementById('back-from-vocab'),
+            addCustomVocabBtn: document.getElementById('add-custom-vocab-btn'),
+            // 模态框
+            helpModal: document.getElementById('help-modal'),
+            helpBtn: document.getElementById('help-btn'),
+            closeHelp: document.getElementById('close-help'),
+            settingsModal: document.getElementById('settings-modal'),
+            settingsBtn: document.getElementById('settings-btn'),
+            closeSettings: document.getElementById('close-settings'),
+            gameDifficulty: document.getElementById('game-difficulty'),
+            quizTimeLimit: document.getElementById('quiz-time-limit'),
+            soundEffects: document.getElementById('sound-effects'),
+            saveSettings: document.getElementById('save-settings'),
+            // 添加词汇模态框
+            addVocabModal: document.getElementById('add-vocab-modal'),
+            closeAddVocabModal: document.getElementById('close-add-vocab-modal'),
+            customVocabForm: document.getElementById('custom-vocab-form'),
+            resetForm: document.getElementById('reset-form'),
+            customEnglish: document.getElementById('custom-english'),
+            customChinese: document.getElementById('custom-chinese'),
+            customDefinition: document.getElementById('custom-definition'),
+            categoryOptions: document.querySelectorAll('.category-option'),
+            // 删除确认模态框
+            deleteConfirmModal: document.getElementById('delete-confirm-modal'),
+            closeDeleteConfirm: document.getElementById('close-delete-confirm'),
+            deleteWordDisplay: document.getElementById('delete-word-display'),
+            cancelDelete: document.getElementById('cancel-delete'),
+            confirmDelete: document.getElementById('confirm-delete')
+        };
+        // 初始化
+        function init() {
+            // 从本地存储加载设置和分数
+            loadFromLocalStorage();
+            // 更新总分显示
+            updateTotalScore();
+            // 初始化词汇表
+            renderVocabularyList();
+            // 加载自定义词汇
+            loadCustomVocabulary();
+            // 添加事件监听器
+            addEventListeners();
+            // 添加删除确认模态框事件监听器
+            addDeleteConfirmModalListeners();
+            // 初始化自定义鼠标
+            initCustomCursor();
+        }
+        
+        // 添加删除确认模态框事件监听器
+        function addDeleteConfirmModalListeners() {
+            // 关闭模态框按钮
+            elements.closeDeleteConfirm.addEventListener('click', hideDeleteConfirmModal);
+            // 取消删除按钮
+            elements.cancelDelete.addEventListener('click', hideDeleteConfirmModal);
+            // 确认删除按钮
+            elements.confirmDelete.addEventListener('click', executeDelete);
+        }
+        
+        // 存储要删除的词汇信息
+        let wordToDelete = null;
+        
+        // 显示删除确认模态框
+        function showDeleteConfirmModal(english, chinese, vocabIndex) {
+            // 设置要删除的词汇显示
+            elements.deleteWordDisplay.textContent = `"${english}" (${chinese})`;
+            // 存储要删除的词汇信息
+            wordToDelete = { english, chinese, vocabIndex };
+            // 显示模态框
+            elements.deleteConfirmModal.classList.replace('hidden', 'flex');
+        }
+        
+        // 隐藏删除确认模态框
+        function hideDeleteConfirmModal() {
+            elements.deleteConfirmModal.classList.replace('flex', 'hidden');
+            // 清除存储的词汇信息
+            wordToDelete = null;
+        }
+        
+        // 执行删除操作
+        function executeDelete() {
+            if (wordToDelete) {
+                // 从 vocabularyData 数组中移除
+                vocabularyData.splice(wordToDelete.vocabIndex, 1);
+                // 重新渲染列表
+                renderVocabularyList();
+                // 保存到 localStorage
+                saveCustomVocabulary();
+                showMessage('词汇删除成功！', 'success');
+                // 隐藏模态框
+                hideDeleteConfirmModal();
+            }
+        }
+        // 从本地存储加载数据
+        function loadFromLocalStorage() {
+            const savedSettings = localStorage.getItem('wordmasterSettings');
+            const savedScores = localStorage.getItem('wordmasterScores');
+            if (savedSettings) {
+                gameState.settings = JSON.parse(savedSettings);
+                elements.gameDifficulty.value = gameState.settings.difficulty;
+                elements.quizTimeLimit.value = gameState.settings.quizTimeLimit;
+                elements.soundEffects.checked = gameState.settings.soundEffects;
+            }
+            if (savedScores) {
+                gameState.scores = JSON.parse(savedScores);
+            }
+        }
+        // 保存数据到本地存储
+        function saveToLocalStorage() {
+            localStorage.setItem('wordmasterSettings', JSON.stringify(gameState.settings));
+            localStorage.setItem('wordmasterScores', JSON.stringify(gameState.scores));
+        }
+        // 更新总分显示
+        function updateTotalScore() {
+            elements.totalScore.textContent = `总分: ${gameState.scores.total}`;
+        }
+        // 添加事件监听器
+        function addEventListeners() {
+            // 功能卡片点击事件
+            elements.pairingCard.addEventListener('click', startPairingGame);
+            elements.spellingCard.addEventListener('click', startSpellingGame);
+            elements.quizCard.addEventListener('click', startQuizGame);
+
+            // 词汇表按钮
+            elements.viewVocabulary.addEventListener('click', showVocabularyList);
+            
+            // 类别选择按钮
+            elements.categoryBtns.forEach(button => {
+                button.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+
+                    // 移除所有按钮的活动状态
+                    elements.categoryBtns.forEach(btn => {
+                        btn.classList.remove('active', 'bg-gray-800', 'text-white');
+                        btn.classList.add('bg-white', 'text-gray-800', 'border', 'border-gray-200');
+                        // 清除内联样式
+                        btn.style.backgroundColor = '';
+                        btn.style.color = '';
+                        btn.style.borderColor = '';
+                    });
+
+                    // 添加当前按钮的活动状态
+                    this.classList.remove('bg-white', 'text-gray-800', 'border', 'border-gray-200');
+                    this.classList.add('active', 'bg-gray-800', 'text-white');
+
+                    // 强制刷新样式
+                    this.style.backgroundColor = '#1f2937';
+                    this.style.color = 'white';
+                    this.style.borderColor = '#1f2937';
+
+                    // 更新选择的类别
+                    gameState.selectedCategory = this.dataset.category;
+
+                    // 给用户视觉反馈
+                    const categoryName = this.textContent.trim();
+                    showMessage(`已选择类别: ${categoryName}`, 'success');
+                });
+            });
+            
+            // 单词配对游戏按钮
+            elements.backFromPairing.addEventListener('click', returnToWelcome);
+            elements.playPairingAgain.addEventListener('click', restartPairingGame);
+            elements.backToHomeFromPairing.addEventListener('click', returnToWelcome);
+            // 拼写练习按钮
+            elements.backFromSpelling.addEventListener('click', returnToWelcome);
+            elements.checkSpelling.addEventListener('click', checkSpellingAnswer);
+            elements.nextSpelling.addEventListener('click', nextSpellingWord);
+            elements.playSpellingAgain.addEventListener('click', restartSpellingGame);
+            elements.backToHomeFromSpelling.addEventListener('click', returnToWelcome);
+            // 快速测验按钮
+            elements.backFromQuiz.addEventListener('click', returnToWelcome);
+            elements.nextQuiz.addEventListener('click', nextQuizQuestion);
+            elements.playQuizAgain.addEventListener('click', restartQuizGame);
+            elements.backToHomeFromQuiz.addEventListener('click', returnToWelcome);
+            // 词汇表按钮
+            elements.backFromVocab.addEventListener('click', returnToWelcome);
+            elements.vocabSearch.addEventListener('input', filterVocabulary);
+            elements.vocabFilters.forEach(button => {
+                button.addEventListener('click', (e) => filterVocabularyByCategory(e.target.dataset.category));
+            });
+            // 模态框按钮
+            elements.helpBtn.addEventListener('click', () => elements.helpModal.classList.replace('hidden', 'flex'));
+            elements.closeHelp.addEventListener('click', () => elements.helpModal.classList.replace('flex', 'hidden'));
+            elements.settingsBtn.addEventListener('click', () => elements.settingsModal.classList.replace('hidden', 'flex'));
+            elements.closeSettings.addEventListener('click', () => elements.settingsModal.classList.replace('flex', 'hidden'));
+            elements.saveSettings.addEventListener('click', saveGameSettings);
+            // 添加自定义词汇按钮和模态框
+            elements.addCustomVocabBtn.addEventListener('click', function() {
+                elements.addVocabModal.classList.replace('hidden', 'flex');
+                // 重置表单
+                elements.customVocabForm.reset();
+                // 初始化选中样式
+                elements.categoryOptions.forEach(option => {
+                    const radio = option.querySelector('input[type="radio"]');
+                    if (radio.checked) {
+                        option.classList.add('border-accent', 'bg-accent/5');
+                        option.classList.remove('border-gray-200');
+                    } else {
+                        option.classList.remove('border-accent', 'bg-accent/5');
+                        option.classList.add('border-gray-200');
+                    }
+                });
+            });
+            elements.closeAddVocabModal.addEventListener('click', function() {
+                elements.addVocabModal.classList.replace('flex', 'hidden');
+            });
+            // 初始化模态框内的类别选择样式
+            elements.categoryOptions.forEach(option => {
+                const radio = option.querySelector('input[type="radio"]');
+                
+                // 设置选中状态的样式
+                function setSelectedStyle() {
+                    if (radio.checked) {
+                        option.classList.add('border-accent', 'bg-accent/5');
+                        option.classList.remove('border-gray-200');
+                    } else {
+                        option.classList.remove('border-accent', 'bg-accent/5');
+                        option.classList.add('border-gray-200');
+                    }
+                }
+                
+                // 初始化样式
+                setSelectedStyle();
+                
+                // 点击类别选项
+                option.addEventListener('click', function() {
+                    radio.checked = true;
+                    elements.categoryOptions.forEach(opt => {
+                        const r = opt.querySelector('input[type="radio"]');
+                        if (r.checked) {
+                            opt.classList.add('border-accent', 'bg-accent/5');
+                            opt.classList.remove('border-gray-200');
+                        } else {
+                            opt.classList.remove('border-accent', 'bg-accent/5');
+                            opt.classList.add('border-gray-200');
+                        }
+                    });
+                });
+                
+                // 监听radio变化
+                radio.addEventListener('change', setSelectedStyle);
+            });
+            // 重置表单
+            elements.resetForm.addEventListener('click', function() {
+                elements.customVocabForm.reset();
+                // 重新应用选中样式
+                elements.categoryOptions.forEach(option => {
+                    const radio = option.querySelector('input[type="radio"]');
+                    if (radio.checked) {
+                        option.classList.add('border-accent', 'bg-accent/5');
+                        option.classList.remove('border-gray-200');
+                    } else {
+                        option.classList.remove('border-accent', 'bg-accent/5');
+                        option.classList.add('border-gray-200');
+                    }
+                });
+            });
+            // 提交表单
+            elements.customVocabForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const english = elements.customEnglish.value.trim();
+                const chinese = elements.customChinese.value.trim();
+                const definition = elements.customDefinition.value.trim();
+                const category = this.querySelector('input[name="custom-category"]:checked').value;
+                
+                if (!english || !chinese) {
+                    showMessage('英文单词和中文释义不能为空！', 'error');
+                    return;
+                }
+                
+                // 添加新词汇
+                addCustomWord(english, chinese, definition, category);
+            });
+        }
+        // 保存游戏设置
+        function saveGameSettings() {
+            gameState.settings.difficulty = elements.gameDifficulty.value;
+            gameState.settings.quizTimeLimit = parseInt(elements.quizTimeLimit.value);
+            gameState.settings.soundEffects = elements.soundEffects.checked;
+            saveToLocalStorage();
+            // 显示保存成功提示
+            const originalText = elements.saveSettings.textContent;
+            elements.saveSettings.textContent = '保存成功!';
+            elements.saveSettings.classList.add('bg-accent', 'text-white');
+            setTimeout(() => {
+                elements.saveSettings.textContent = originalText;
+                elements.saveSettings.classList.remove('bg-accent', 'text-white');
+                elements.settingsModal.classList.replace('flex', 'hidden');
+            }, 1000);
+        }
+        // 显示欢迎界面，隐藏其他界面
+        function showWelcomeScreen() {
+            elements.welcomeScreen.classList.remove('hidden');
+            elements.pairingGame.classList.add('hidden');
+            elements.spellingGame.classList.add('hidden');
+            elements.quizGame.classList.add('hidden');
+            elements.vocabularyList.classList.add('hidden');
+            elements.helpModal.classList.add('hidden');
+            elements.settingsModal.classList.add('hidden');
+            elements.addVocabModal.classList.add('hidden');
+            
+            // 添加页面进入动画
+            setTimeout(() => {
+                elements.welcomeScreen.classList.add('page-enter-active');
+                elements.welcomeScreen.classList.remove('page-enter');
+            }, 10);
+        }
+        // 返回欢迎界面
+        function returnToWelcome() {
+            // 清除任何正在运行的计时器
+            if (gameState.currentPairing.timer) {
+                clearInterval(gameState.currentPairing.timer);
+            }
+            if (gameState.currentQuiz.timer) {
+                clearInterval(gameState.currentQuiz.timer);
+            }
+            
+            // 添加页面退出动画
+            const currentScreen = elements.pairingGame.classList.contains('hidden') 
+                ? elements.spellingGame.classList.contains('hidden') 
+                    ? elements.quizGame.classList.contains('hidden') 
+                        ? elements.vocabularyList 
+                        : elements.quizGame 
+                    : elements.spellingGame 
+                : elements.pairingGame;
+            
+            currentScreen.classList.remove('page-enter-active');
+            currentScreen.classList.add('page-enter');
+            
+            setTimeout(() => {
+                showWelcomeScreen();
+            }, 300);
+        }
+        // 获取当前类别的词汇
+        function getCurrentCategoryVocabulary() {
+            if (gameState.selectedCategory === 'all') {
+                return vocabularyData;
+            } else {
+                return vocabularyData.filter(item => item.category === gameState.selectedCategory);
+            }
+        }
+        // 单词配对游戏
+        function startPairingGame() {
+            gameState.currentGame = 'pairing';
+            // 获取当前类别的词汇
+            const currentCategoryVocab = getCurrentCategoryVocabulary();
+
+            // 固定使用7个单词对（14张卡片）
+            const vocabCount = 7;
+
+            // 如果当前类别词汇不足，调整数量
+            const actualVocabCount = Math.min(vocabCount, currentCategoryVocab.length);
+
+            // 随机选择词汇
+            const shuffledVocab = [...currentCategoryVocab]
+                .sort(() => 0.5 - Math.random())
+                .slice(0, actualVocabCount);
+            // 重置游戏状态
+            gameState.currentPairing = {
+                matched: 0,
+                flippedCards: [],
+                isProcessing: false,
+                startTime: new Date().getTime(),
+                timer: setInterval(updatePairingTime, 1000)
+            };
+            // 更新界面
+            elements.pairingMatches.textContent = `已匹配: 0`;
+            elements.pairingTime.textContent = `时间: 0s`;
+            elements.pairingResults.classList.add('hidden');
+            elements.pairingBoard.innerHTML = '';
+            // 创建卡片数组 (英文和中文)
+            const cards = [];
+            shuffledVocab.forEach(item => {
+                cards.push({ type: 'english', text: item.english, pairId: item.english });
+                cards.push({ type: 'chinese', text: item.chinese, pairId: item.english });
+            });
+            // 打乱卡片顺序
+            const shuffledCards = cards.sort(() => 0.5 - Math.random());
+            // 创建卡片元素
+            shuffledCards.forEach((card, index) => {
+                const cardElement = document.createElement('div');
+                cardElement.className = 'card-flip cursor-pointer';
+                cardElement.dataset.index = index;
+                cardElement.dataset.pairId = card.pairId;
+                cardElement.dataset.type = card.type;
+                const cardInner = document.createElement('div');
+                cardInner.className = 'card-inner relative w-full h-20 md:h-24 rounded-xl shadow-card';
+                const cardFront = document.createElement('div');
+                cardFront.className = 'card-front absolute inset-0 bg-gray-50 rounded-xl flex items-center justify-center';
+                cardFront.innerHTML = `<i class="fa fa-book text-xl md:text-2xl text-primary"></i>`;
+                const cardBack = document.createElement('div');
+                cardBack.className = `card-back absolute inset-0 rounded-xl flex items-center justify-center p-2 md:p-3 text-center text-sm md:text-base font-medium ${card.type === 'english' ? 'bg-gray-50 text-primary' : 'bg-gray-50 text-accent'}`;
+                cardBack.textContent = card.text;
+                cardInner.appendChild(cardFront);
+                cardInner.appendChild(cardBack);
+                cardElement.appendChild(cardInner);
+                cardElement.addEventListener('click', flipPairingCard);
+                elements.pairingBoard.appendChild(cardElement);
+            });
+            // 显示游戏界面
+            elements.welcomeScreen.classList.add('hidden');
+            elements.pairingGame.classList.remove('hidden');
+            
+            // 添加页面进入动画
+            setTimeout(() => {
+                elements.pairingGame.classList.add('page-enter-active');
+                elements.pairingGame.classList.remove('page-enter');
+            }, 10);
+        }
+        // 翻转配对卡片
+        function flipPairingCard() {
+            const card = this;
+            // 如果卡片已经翻转、正在处理或已经匹配，则不执行任何操作
+            if (card.classList.contains('flipped') || gameState.currentPairing.isProcessing) {
+                return;
+            }
+            // 翻转卡片
+            card.classList.add('flipped');
+            gameState.currentPairing.flippedCards.push(card);
+            // 如果已经翻转了两张卡片，检查是否匹配
+            if (gameState.currentPairing.flippedCards.length === 2) {
+                gameState.currentPairing.isProcessing = true;
+                const card1 = gameState.currentPairing.flippedCards[0];
+                const card2 = gameState.currentPairing.flippedCards[1];
+                // 检查是否匹配
+                if (card1.dataset.pairId === card2.dataset.pairId && card1.dataset.type !== card2.dataset.type) {
+                    // 匹配成功
+                    playSound('correct');
+                    // 增加匹配计数
+                    gameState.currentPairing.matched++;
+                    elements.pairingMatches.textContent = `已匹配: ${gameState.currentPairing.matched}`;
+                    // 禁用已匹配的卡片
+                    card1.removeEventListener('click', flipPairingCard);
+                    card2.removeEventListener('click', flipPairingCard);
+                    card1.classList.add('opacity-70');
+                    card2.classList.add('opacity-70');
+                    // 清空已翻转卡片数组
+                    gameState.currentPairing.flippedCards = [];
+                    gameState.currentPairing.isProcessing = false;
+                    // 检查游戏是否结束
+                    const totalPairs = elements.pairingBoard.children.length / 2;
+                    if (gameState.currentPairing.matched === totalPairs) {
+                        endPairingGame();
+                    }
+                } else {
+                    // 匹配失败
+                    playSound('wrong');
+                    // 延迟后翻回卡片
+                    setTimeout(() => {
+                        card1.classList.remove('flipped');
+                        card2.classList.remove('flipped');
+                        gameState.currentPairing.flippedCards = [];
+                        gameState.currentPairing.isProcessing = false;
+                    }, 1000);
+                }
+            }
+        }
+        // 更新配对游戏时间
+        function updatePairingTime() {
+            const currentTime = new Date().getTime();
+            const elapsedTime = Math.floor((currentTime - gameState.currentPairing.startTime) / 1000);
+            elements.pairingTime.textContent = `时间: ${elapsedTime}s`;
+        }
+        // 结束配对游戏
+        function endPairingGame() {
+            // 清除计时器
+            clearInterval(gameState.currentPairing.timer);
+            // 计算得分 (基于用时和难度)
+            const endTime = new Date().getTime();
+            const totalTime = Math.floor((endTime - gameState.currentPairing.startTime) / 1000);
+            let score = 1000 - (totalTime * 10);
+            // 根据难度调整分数
+            if (gameState.settings.difficulty === 'easy') score *= 0.8;
+            if (gameState.settings.difficulty === 'hard') score *= 1.2;
+            // 确保分数不为负
+            score = Math.max(10, Math.round(score));
+            // 更新分数
+            gameState.scores.pairing = score;
+            gameState.scores.total += score;
+            saveToLocalStorage();
+            updateTotalScore();
+            // 更新结果界面
+            elements.finalPairingTime.textContent = `${totalTime}秒`;
+            elements.pairingScore.textContent = score;
+            // 显示结果界面
+            setTimeout(() => {
+                elements.pairingResults.classList.remove('hidden');
+            }, 1000);
+        }
+        // 重新开始配对游戏
+        function restartPairingGame() {
+            if (gameState.currentPairing.timer) {
+                clearInterval(gameState.currentPairing.timer);
+            }
+            startPairingGame();
+        }
+        // 拼写练习游戏
+        function startSpellingGame() {
+            gameState.currentGame = 'spelling';
+            // 获取当前类别的词汇
+            const currentCategoryVocab = getCurrentCategoryVocabulary();
+            
+            // 根据难度选择词汇数量
+            let vocabCount = 15;
+            if (gameState.settings.difficulty === 'easy') vocabCount = 10;
+            if (gameState.settings.difficulty === 'hard') vocabCount = 20;
+            
+            // 如果当前类别词汇不足，调整数量
+            vocabCount = Math.min(vocabCount, currentCategoryVocab.length);
+            
+            // 随机选择词汇
+            gameState.currentVocabulary = [...currentCategoryVocab]
+                .sort(() => 0.5 - Math.random())
+                .slice(0, vocabCount);
+            // 重置游戏状态
+            gameState.currentSpelling = {
+                index: 0,
+                correct: 0,
+                wrong: 0,
+                misspelled: []
+            };
+            // 更新界面
+            elements.spellingCorrect.textContent = `正确: 0`;
+            elements.spellingWrong.textContent = `错误: 0`;
+            elements.spellingCurrent.textContent = '1';
+            elements.spellingTotal.textContent = gameState.currentVocabulary.length;
+            elements.spellingProgress.style.width = '0%';
+            elements.spellingResults.classList.add('hidden');
+            elements.spellingFeedback.classList.add('hidden');
+            elements.nextSpelling.classList.add('hidden');
+            // 显示第一个单词
+            showSpellingWord(0);
+            // 显示游戏界面
+            elements.welcomeScreen.classList.add('hidden');
+            elements.spellingGame.classList.remove('hidden');
+            
+            // 添加页面进入动画
+            setTimeout(() => {
+                elements.spellingGame.classList.add('page-enter-active');
+                elements.spellingGame.classList.remove('page-enter');
+            }, 10);
+            
+            // 聚焦输入框
+            elements.spellingInput.focus();
+        }
+        // 显示拼写单词
+        function showSpellingWord(index) {
+            const vocab = gameState.currentVocabulary[index];
+            elements.spellingHint.textContent = vocab.chinese;
+            elements.spellingInput.value = '';
+            elements.spellingFeedback.classList.add('hidden');
+            elements.nextSpelling.classList.add('hidden');
+        }
+        // 检查拼写答案
+        function checkSpellingAnswer() {
+            const currentIndex = gameState.currentSpelling.index;
+            const vocab = gameState.currentVocabulary[currentIndex];
+            const userAnswer = elements.spellingInput.value.trim().toLowerCase();
+            const correctAnswer = vocab.english.toLowerCase();
+            // 显示反馈
+            elements.spellingFeedback.classList.remove('hidden');
+            if (userAnswer === correctAnswer) {
+                // 答案正确
+                playSound('correct');
+                gameState.currentSpelling.correct++;
+                elements.spellingCorrect.textContent = `正确: ${gameState.currentSpelling.correct}`;
+                elements.spellingFeedback.className = 'p-5 rounded-lg mb-6 bg-green-50 border border-green-200 text-green-700';
+                elements.spellingFeedback.innerHTML = `<i class="fa fa-check-circle mr-2"></i> 正确! ${vocab.english}`;
+            } else {
+                // 答案错误
+                playSound('wrong');
+                gameState.currentSpelling.wrong++;
+                elements.spellingWrong.textContent = `错误: ${gameState.currentSpelling.wrong}`;
+                elements.spellingFeedback.className = 'p-5 rounded-lg mb-6 bg-red-50 border border-red-200 text-red-700';
+                elements.spellingFeedback.innerHTML = `<i class="fa fa-times-circle mr-2"></i> 错误。正确答案是: ${vocab.english}`;
+                // 记录拼写错误的单词
+                gameState.currentSpelling.misspelled.push({
+                    english: vocab.english,
+                    chinese: vocab.chinese,
+                    userAnswer: userAnswer
+                });
+            }
+            // 显示下一个按钮
+            elements.nextSpelling.classList.remove('hidden');
+        }
+        // 下一个拼写单词
+        function nextSpellingWord() {
+            gameState.currentSpelling.index++;
+            // 检查是否还有单词
+            if (gameState.currentSpelling.index < gameState.currentVocabulary.length) {
+                // 显示下一个单词
+                showSpellingWord(gameState.currentSpelling.index);
+                // 更新进度
+                const progress = ((gameState.currentSpelling.index + 1) / gameState.currentVocabulary.length) * 100;
+                elements.spellingProgress.style.width = `${progress}%`;
+                elements.spellingCurrent.textContent = gameState.currentSpelling.index + 1;
+                // 聚焦输入框
+                elements.spellingInput.focus();
+            } else {
+                // 结束拼写练习
+                endSpellingGame();
+            }
+        }
+        // 结束拼写练习
+        function endSpellingGame() {
+            // 计算得分
+            const totalWords = gameState.currentVocabulary.length;
+            const accuracy = Math.round((gameState.currentSpelling.correct / totalWords) * 100);
+            let score = Math.round((gameState.currentSpelling.correct / totalWords) * 1000);
+            // 根据难度调整分数
+            if (gameState.settings.difficulty === 'easy') score *= 0.8;
+            if (gameState.settings.difficulty === 'hard') score *= 1.2;
+            // 更新分数
+            gameState.scores.spelling = score;
+            gameState.scores.total += score;
+            saveToLocalStorage();
+            updateTotalScore();
+            // 更新结果界面
+            elements.totalSpellingWords.textContent = totalWords;
+            elements.finalSpellingCorrect.textContent = gameState.currentSpelling.correct;
+            elements.finalSpellingWrong.textContent = gameState.currentSpelling.wrong;
+            elements.spellingAccuracy.textContent = `${accuracy}%`;
+            // 显示错误单词
+            elements.misspelledWords.innerHTML = '';
+            if (gameState.currentSpelling.misspelled.length > 0) {
+                gameState.currentSpelling.misspelled.forEach(item => {
+                    const wordElement = document.createElement('div');
+                    wordElement.className = 'bg-gray-50 rounded-full px-4 py-2 text-sm font-medium';
+                    wordElement.textContent = item.english;
+                    elements.misspelledWords.appendChild(wordElement);
+                });
+            } else {
+                elements.misspelledWords.innerHTML = '<p class="text-neutral">恭喜！没有拼写错误的单词</p>';
+            }
+            // 显示结果界面
+            elements.spellingResults.classList.remove('hidden');
+        }
+        // 重新开始拼写练习
+        function restartSpellingGame() {
+            startSpellingGame();
+        }
+        // 快速测验游戏
+        function startQuizGame() {
+            gameState.currentGame = 'quiz';
+            // 获取当前类别的词汇
+            const currentCategoryVocab = getCurrentCategoryVocabulary();
+            
+            // 根据难度选择题目数量
+            let questionCount = 10;
+            if (gameState.settings.difficulty === 'easy') questionCount = 8;
+            if (gameState.settings.difficulty === 'hard') questionCount = 15;
+            
+            // 如果当前类别词汇不足，调整数量
+            questionCount = Math.min(questionCount, currentCategoryVocab.length);
+            
+            // 随机选择词汇作为题目
+            gameState.currentVocabulary = [...currentCategoryVocab]
+                .sort(() => 0.5 - Math.random())
+                .slice(0, questionCount);
+            // 重置游戏状态
+            gameState.currentQuiz = {
+                index: 0,
+                correct: 0,
+                wrong: 0,
+                score: 0,
+                timer: null,
+                timeRemaining: gameState.settings.quizTimeLimit
+            };
+            // 更新界面
+            elements.quizScore.textContent = `得分: 0`;
+            elements.quizCurrent.textContent = '1';
+            elements.quizTotal.textContent = gameState.currentVocabulary.length;
+            elements.quizProgress.style.width = '0%';
+            elements.quizResults.classList.add('hidden');
+            elements.quizFeedback.classList.add('hidden');
+            elements.nextQuiz.classList.add('hidden');
+            // 显示第一个问题
+            showQuizQuestion(0);
+            // 显示游戏界面
+            elements.welcomeScreen.classList.add('hidden');
+            elements.quizGame.classList.remove('hidden');
+            
+            // 添加页面进入动画
+            setTimeout(() => {
+                elements.quizGame.classList.add('page-enter-active');
+                elements.quizGame.classList.remove('page-enter');
+            }, 10);
+        }
+        // 显示测验问题
+        function showQuizQuestion(index) {
+            const vocab = gameState.currentVocabulary[index];
+            const questionType = Math.random() > 0.5 ? 'english' : 'chinese'; // 随机选择问题类型：英文问中文或中文问英文
+            // 保存问题类型，用于检查答案
+            gameState.currentQuiz.questionType = questionType;
+            // 设置问题
+            if (questionType === 'english') {
+                elements.quizQuestion.textContent = `"${vocab.english}"对应的中文是什么?`;
+                gameState.currentQuiz.correctAnswer = vocab.chinese;
+            } else {
+                elements.quizQuestion.textContent = `"${vocab.chinese}"对应的英文是什么?`;
+                gameState.currentQuiz.correctAnswer = vocab.english;
+            }
+            // 生成选项：1个正确答案 + 3个干扰项
+            const options = [gameState.currentQuiz.correctAnswer];
+            // 添加干扰项
+            while (options.length < 4) {
+                // 随机选择一个不同的词汇作为干扰项
+                const randomIndex = Math.floor(Math.random() * vocabularyData.length);
+                const distractor = questionType === 'english' 
+                    ? vocabularyData[randomIndex].chinese 
+                    : vocabularyData[randomIndex].english;
+                // 确保干扰项不重复且与正确答案不同
+                if (!options.includes(distractor) && distractor !== gameState.currentQuiz.correctAnswer) {
+                    options.push(distractor);
+                }
+            }
+            // 打乱选项顺序
+            const shuffledOptions = options.sort(() => 0.5 - Math.random());
+            // 显示选项
+            elements.quizOptions.innerHTML = '';
+            shuffledOptions.forEach((option, i) => {
+                const optionElement = document.createElement('div');
+                optionElement.className = 'p-5 border border-gray-200 rounded-xl hover:bg-gray-50 cursor-pointer transition-colors text-lg font-medium';
+                optionElement.dataset.option = option;
+                optionElement.innerHTML = `<span class="inline-block w-8 h-8 rounded-full bg-gray-100 text-center mr-3">${String.fromCharCode(65 + i)}</span>${option}`;
+                optionElement.addEventListener('click', selectQuizOption);
+                elements.quizOptions.appendChild(optionElement);
+            });
+            // 重置计时器
+            resetQuizTimer();
+        }
+        // 重置测验计时器
+        function resetQuizTimer() {
+            // 清除之前的计时器
+            if (gameState.currentQuiz.timer) {
+                clearInterval(gameState.currentQuiz.timer);
+            }
+            // 重置时间
+            gameState.currentQuiz.timeRemaining = gameState.settings.quizTimeLimit;
+            elements.quizTimer.textContent = `${gameState.currentQuiz.timeRemaining}s`;
+            // 重置进度环
+            const circumference = 2 * Math.PI * 16;
+            elements.quizTimerCircle.style.strokeDasharray = circumference;
+            elements.quizTimerCircle.style.strokeDashoffset = 0;
+            // 启动新计时器
+            gameState.currentQuiz.timer = setInterval(updateQuizTimer, 1000);
+        }
+        // 更新测验计时器
+        function updateQuizTimer() {
+            gameState.currentQuiz.timeRemaining--;
+            elements.quizTimer.textContent = `${gameState.currentQuiz.timeRemaining}s`;
+            // 更新进度环
+            const circumference = 2 * Math.PI * 16;
+            const offset = circumference * (1 - gameState.currentQuiz.timeRemaining / gameState.settings.quizTimeLimit);
+            elements.quizTimerCircle.style.strokeDashoffset = offset;
+            // 改变颜色表示时间紧迫
+            if (gameState.currentQuiz.timeRemaining <= 5) {
+                elements.quizTimerCircle.classList.remove('text-primary');
+                elements.quizTimerCircle.classList.add('text-accent');
+                elements.quizTimer.classList.add('text-accent');
+            } else {
+                elements.quizTimerCircle.classList.remove('text-accent');
+                elements.quizTimerCircle.classList.add('text-primary');
+                elements.quizTimer.classList.remove('text-accent');
+            }
+            // 时间到
+            if (gameState.currentQuiz.timeRemaining <= 0) {
+                clearInterval(gameState.currentQuiz.timer);
+                timeOutQuizQuestion();
+            }
+        }
+        // 超时未回答
+        function timeOutQuizQuestion() {
+            // 答案错误
+            playSound('wrong');
+            gameState.currentQuiz.wrong++;
+            // 显示反馈
+            elements.quizFeedback.classList.remove('hidden');
+            elements.quizFeedback.className = 'p-5 rounded-lg mb-6 bg-red-50 border border-red-200 text-red-700';
+            elements.quizFeedback.innerHTML = `<i class="fa fa-clock-o mr-2"></i> 时间到！正确答案是: ${gameState.currentQuiz.correctAnswer}`;
+            // 禁用所有选项
+            const options = elements.quizOptions.querySelectorAll('div');
+            options.forEach(option => {
+                option.removeEventListener('click', selectQuizOption);
+                option.classList.remove('hover:bg-gray-50', 'cursor-pointer');
+                // 高亮正确答案
+                if (option.dataset.option === gameState.currentQuiz.correctAnswer) {
+                    option.classList.add('bg-green-50', 'border-green-200');
+                }
+            });
+            // 显示下一题按钮
+            elements.nextQuiz.classList.remove('hidden');
+        }
+        // 选择测验选项
+        function selectQuizOption() {
+            // 清除计时器
+            clearInterval(gameState.currentQuiz.timer);
+            const selectedOption = this.dataset.option;
+            const isCorrect = selectedOption === gameState.currentQuiz.correctAnswer;
+            // 禁用所有选项
+            const options = elements.quizOptions.querySelectorAll('div');
+            options.forEach(option => {
+                option.removeEventListener('click', selectQuizOption);
+                option.classList.remove('hover:bg-gray-50', 'cursor-pointer');
+                // 高亮正确和错误答案
+                if (option.dataset.option === gameState.currentQuiz.correctAnswer) {
+                    option.classList.add('bg-green-50', 'border-green-200');
+                } else if (option === this) {
+                    option.classList.add('bg-red-50', 'border-red-200');
+                }
+            });
+            // 显示反馈
+            elements.quizFeedback.classList.remove('hidden');
+            if (isCorrect) {
+                // 答案正确
+                playSound('correct');
+                gameState.currentQuiz.correct++;
+                // 根据剩余时间计算得分
+                const timeBonus = Math.round((gameState.currentQuiz.timeRemaining / gameState.settings.quizTimeLimit) * 50);
+                const questionScore = 50 + timeBonus;
+                gameState.currentQuiz.score += questionScore;
+                elements.quizFeedback.className = 'p-5 rounded-lg mb-6 bg-green-50 border border-green-200 text-green-700';
+                elements.quizFeedback.innerHTML = `<i class="fa fa-check-circle mr-2"></i> 正确! 获得 ${questionScore} 分`;
+            } else {
+                // 答案错误
+                playSound('wrong');
+                gameState.currentQuiz.wrong++;
+                elements.quizFeedback.className = 'p-5 rounded-lg mb-6 bg-red-50 border border-red-200 text-red-700';
+                elements.quizFeedback.innerHTML = `<i class="fa fa-times-circle mr-2"></i> 错误。正确答案是: ${gameState.currentQuiz.correctAnswer}`;
+            }
+            // 更新分数显示
+            elements.quizScore.textContent = `得分: ${gameState.currentQuiz.score}`;
+            // 显示下一题按钮
+            elements.nextQuiz.classList.remove('hidden');
+        }
+        // 下一个测验问题
+        function nextQuizQuestion() {
+            gameState.currentQuiz.index++;
+            // 检查是否还有问题
+            if (gameState.currentQuiz.index < gameState.currentVocabulary.length) {
+                // 显示下一个问题
+                showQuizQuestion(gameState.currentQuiz.index);
+                // 更新进度
+                const progress = ((gameState.currentQuiz.index + 1) / gameState.currentVocabulary.length) * 100;
+                elements.quizProgress.style.width = `${progress}%`;
+                elements.quizCurrent.textContent = gameState.currentQuiz.index + 1;
+                // 隐藏反馈和下一题按钮
+                elements.quizFeedback.classList.add('hidden');
+                elements.nextQuiz.classList.add('hidden');
+            } else {
+                // 结束测验
+                endQuizGame();
+            }
+        }
+        // 结束测验
+        function endQuizGame() {
+            // 清除计时器
+            if (gameState.currentQuiz.timer) {
+                clearInterval(gameState.currentQuiz.timer);
+            }
+            // 根据难度调整分数
+            let finalScore = gameState.currentQuiz.score;
+            if (gameState.settings.difficulty === 'easy') finalScore *= 0.8;
+            if (gameState.settings.difficulty === 'hard') finalScore *= 1.2;
+            // 更新分数
+            gameState.scores.quiz = Math.round(finalScore);
+            gameState.scores.total += Math.round(finalScore);
+            saveToLocalStorage();
+            updateTotalScore();
+            // 更新结果界面
+            elements.totalQuizQuestions.textContent = gameState.currentVocabulary.length;
+            elements.finalQuizCorrect.textContent = gameState.currentQuiz.correct;
+            elements.finalQuizWrong.textContent = gameState.currentQuiz.wrong;
+            elements.finalQuizScore.textContent = Math.round(finalScore);
+            // 显示结果界面
+            elements.quizResults.classList.remove('hidden');
+        }
+        // 重新开始测验
+        function restartQuizGame() {
+            startQuizGame();
+        }
+        // 显示词汇表
+        function showVocabularyList() {
+            renderVocabularyList();
+            // 显示词汇表界面
+            elements.welcomeScreen.classList.add('hidden');
+            elements.vocabularyList.classList.remove('hidden');
+            
+            // 添加页面进入动画
+            setTimeout(() => {
+                elements.vocabularyList.classList.add('page-enter-active');
+                elements.vocabularyList.classList.remove('page-enter');
+            }, 10);
+        }
+        // 添加自定义词汇
+        function addCustomWord(english, chinese, definition, category) {
+            // 获取已保存的自定义词汇
+            const savedCustom = localStorage.getItem('wordmasterCustomWords') || '[]';
+            const customVocab = JSON.parse(savedCustom);
+            
+            // 检查是否已存在相同词汇
+            const exists = customVocab.some(item => 
+                item.english.toLowerCase() === english.toLowerCase() && 
+                item.chinese === chinese
+            );
+            
+            if (exists) {
+                showMessage('这个词汇已经存在！', 'error');
+                return;
+            }
+            
+            // 创建新词汇对象
+            const newWord = {
+                english: english,
+                chinese: chinese,
+                definition: definition || `${english}的定义`,
+                category: category,
+                isCustom: true,
+                addedDate: new Date().toISOString()
+            };
+            
+            // 添加到数组
+            customVocab.push(newWord);
+            
+            // 保存回localStorage
+            localStorage.setItem('wordmasterCustomWords', JSON.stringify(customVocab));
+            
+            // 显示成功消息
+            showMessage('自定义词汇添加成功！', 'success');
+            
+            // 关闭模态框
+            elements.addVocabModal.classList.replace('flex', 'hidden');
+            
+            // 重新加载词汇表
+            loadCustomVocabulary();
+            renderVocabularyList();
+        }
+        // 保存自定义词汇到localStorage
+        function saveCustomVocabulary() {
+            const customVocab = vocabularyData.filter(item => item.isCustom);
+            localStorage.setItem('wordmasterCustomWords', JSON.stringify(customVocab));
+        }
+        // 加载自定义词汇
+        function loadCustomVocabulary() {
+            const savedCustom = localStorage.getItem('wordmasterCustomWords');
+            if (savedCustom) {
+                const customVocab = JSON.parse(savedCustom);
+                // 检查是否已经存在这些词汇
+                customVocab.forEach(item => {
+                    const exists = vocabularyData.some(vocab => 
+                        vocab.english.toLowerCase() === item.english.toLowerCase() && 
+                        vocab.chinese === item.chinese
+                    );
+                    if (!exists) {
+                        vocabularyData.push(item);
+                    }
+                });
+            }
+        }
+        // 显示消息提示
+        function showMessage(message, type = 'info') {
+            // 检查是否已存在消息元素
+            let messageElement = document.getElementById('notification-message');
+            if (messageElement) {
+                messageElement.remove();
+            }
+            messageElement = document.createElement('div');
+            messageElement.id = 'notification-message';
+            messageElement.className = `fixed bottom-6 right-6 px-6 py-4 rounded-lg shadow-lg z-50 transform transition-all duration-300 translate-y-0 opacity-100 bg-white border border-gray-100`;
+            // 设置不同类型的样式
+            if (type === 'success') {
+                messageElement.innerHTML = `<i class="fa fa-check-circle mr-2 text-green-500"></i>${message}`;
+            } else if (type === 'error') {
+                messageElement.innerHTML = `<i class="fa fa-times-circle mr-2 text-red-500"></i>${message}`;
+            } else {
+                messageElement.innerHTML = `<i class="fa fa-info-circle mr-2 text-accent"></i>${message}`;
+            }
+            document.body.appendChild(messageElement);
+            // 3秒后自动消失
+            setTimeout(() => {
+                messageElement.classList.add('opacity-0', 'translate-y-4');
+                setTimeout(() => {
+                    messageElement.remove();
+                }, 300);
+            }, 3000);
+        }
+        // 渲染词汇表
+        function renderVocabularyList(filteredVocab = null) {
+            const vocabToRender = filteredVocab || vocabularyData;
+            // 清空表格内容
+            elements.vocabTableBody.innerHTML = '';
+            vocabToRender.forEach((item, index) => {
+                const row = document.createElement('tr');
+                row.className = 'border-b border-gray-100 hover:bg-gray-50 transition-colors even:bg-gray-50';
+                // 为自定义词汇添加 data-custom 属性
+                if (item.isCustom) {
+                    row.dataset.custom = 'true';
+                }
+                row.innerHTML = `
+                    <td class="py-4 px-6 font-medium text-lg">${item.english}</td>
+                    <td class="py-4 px-6 text-lg">${item.chinese}</td>
+                    <td class="py-4 px-6">
+                        <span class="px-3 py-1.5 rounded-full text-xs font-medium ${getCategoryClass(item.category)}">
+                            ${getCategoryName(item.category)}
+                        </span>
+                    </td>
+                    <td class="py-4 px-6">
+                        <button class="text-accent hover:text-accent/80 mr-4 play-pronunciation p-2 rounded-lg hover:bg-gray-50 transition-colors" data-word="${item.english}">
+                            <i class="fa fa-volume-up"></i>
+                        </button>
+                        ${item.isCustom ? `
+                        <button class="text-accent hover:text-blue-700 delete-custom-word p-2 rounded-lg hover:bg-gray-50 transition-colors" 
+                                data-english="${encodeURIComponent(item.english)}" 
+                                data-chinese="${encodeURIComponent(item.chinese)}">
+                            <i class="fa fa-trash"></i>
+                        </button>` : ''}
+                    </td>
+                `;
+                elements.vocabTableBody.appendChild(row);
+            });
+            // 为所有“删除”按钮绑定事件
+            document.querySelectorAll('.delete-custom-word').forEach(button => {
+                button.addEventListener('click', function() {
+                    const english = decodeURIComponent(this.dataset.english);
+                    const chinese = decodeURIComponent(this.dataset.chinese);
+                    
+                    // 找到词汇在原始数组中的索引
+                    const vocabIndex = vocabularyData.findIndex(item => 
+                        item.english === english && item.chinese === chinese
+                    );
+                    
+                    if (vocabIndex !== -1) {
+                        // 显示自定义删除确认模态框
+                        showDeleteConfirmModal(english, chinese, vocabIndex);
+                    } else {
+                        showMessage('未找到该词汇，删除失败！', 'error');
+                    }
+                });
+            });
+            // 为发音按钮绑定事件
+            document.querySelectorAll('.play-pronunciation').forEach(button => {
+                button.addEventListener('click', function() {
+                    const word = this.dataset.word;
+                    playPronunciation(word);
+                });
+            });
+        }
+        // 获取类别样式
+        function getCategoryClass(category) {
+            switch(category) {
+                case 'daily': return 'bg-blue-50 text-blue-600';
+                case 'business': return 'bg-green-50 text-green-600';
+                case 'academic': return 'bg-purple-50 text-purple-600';
+                case 'travel': return 'bg-orange-50 text-orange-600';
+                case 'technology': return 'bg-red-50 text-red-600';
+                default: return 'bg-gray-50 text-gray-600';
+            }
+        }
+        // 获取类别名称
+        function getCategoryName(category) {
+            switch(category) {
+                case 'daily': return '日常生活';
+                case 'business': return '商务职场';
+                case 'academic': return '学术教育';
+                case 'travel': return '旅游出行';
+                case 'technology': return '科技数码';
+                default: return '其他';
+            }
+        }
+        // 过滤词汇表
+        function filterVocabulary() {
+            const searchTerm = elements.vocabSearch.value.toLowerCase();
+            const filtered = vocabularyData.filter(item => 
+                item.english.toLowerCase().includes(searchTerm) || 
+                item.chinese.toLowerCase().includes(searchTerm)
+            );
+            renderVocabularyList(filtered);
+        }
+        // 按类别过滤词汇表
+        function filterVocabularyByCategory(category) {
+            // 更新过滤按钮样式
+            elements.vocabFilters.forEach(button => {
+                if (button.dataset.category === category) {
+                    button.className = 'vocab-filter px-5 py-2.5 bg-primary text-white rounded-lg text-sm font-medium';
+                } else {
+                    button.className = 'vocab-filter px-5 py-2.5 bg-white text-dark border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors';
+                }
+            });
+            // 重置添加词汇按钮样式
+            if (elements.addCustomVocabBtn) {
+                elements.addCustomVocabBtn.className = 'vocab-filter px-5 py-2.5 bg-accent text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors flex items-center gap-2';
+            }
+            // 过滤词汇
+            if (category === 'all') {
+                renderVocabularyList();
+            } else {
+                const filtered = vocabularyData.filter(item => item.category === category);
+                renderVocabularyList(filtered);
+            }
+        }
+        // 播放发音 - 使用Web Speech API实现
+        function playPronunciation(word) {
+            playSound('pronounce');
+            console.log(`播放发音: ${word}`);
+            // 检查浏览器是否支持Web Speech API
+            if ('speechSynthesis' in window) {
+                // 停止任何正在播放的发音
+                window.speechSynthesis.cancel();
+                // 创建发音实例
+                const utterance = new SpeechSynthesisUtterance(word);
+                // 设置语言
+                utterance.lang = 'en-US';
+                // 设置音量、语速、语调
+                utterance.volume = 1; // 0到1
+                utterance.rate = 0.9; // 0.1到10
+                utterance.pitch = 1; // 0到2
+                // 播放发音
+                window.speechSynthesis.speak(utterance);
+                // 显示播放中的状态
+                showMessage(`正在播放单词发音: ${word}`, 'info');
+            } else {
+                // 降级处理，使用alert提示
+                alert(`正在播放 "${word}" 的发音`);
+            }
+        }
+        // 播放音效 (模拟)
+        function playSound(type) {
+            if (!gameState.settings.soundEffects) return;
+            console.log(`播放音效: ${type}`);
+            // 实际项目中可以在这里添加音效播放代码
+        }
+        // 初始化自定义鼠标
+        function initCustomCursor() {
+            const cursor = document.getElementById('custom-cursor');
+            let mouseX = 0;
+            let mouseY = 0;
+            let cursorX = 0;
+            let cursorY = 0;
+
+            // 初始显示光标
+            document.addEventListener('mousemove', (e) => {
+                cursor.style.opacity = '1';
+                mouseX = e.clientX;
+                mouseY = e.clientY;
+            });
+
+            // 平滑跟随效果
+            function animateCursor() {
+                const speed = 0.2; // 跟随速度
+                cursorX += (mouseX - cursorX) * speed;
+                cursorY += (mouseY - cursorY) * speed;
+            
+                cursor.style.transform = `translate(${cursorX}px, ${cursorY}px)`;
+                requestAnimationFrame(animateCursor);
+            }
+
+            animateCursor();
+
+            // 悬停效果示例
+            const hoverElements = document.querySelectorAll('button, .card-flip, .category-option, .quiz-options > div');
+            hoverElements.forEach(element => {
+                element.addEventListener('mouseenter', () => {
+                    cursor.classList.add('cursor-hover');
+                    // 扩大鼠标指示器
+                    cursor.style.width = '40px';
+                    cursor.style.height = '40px';
+                    cursor.style.borderWidth = '2px';
+                });
+            
+                element.addEventListener('mouseleave', () => {
+                    cursor.classList.remove('cursor-hover');
+                    // 恢复原始大小
+                    cursor.style.width = '24px';
+                    cursor.style.height = '24px';
+                    cursor.style.borderWidth = '1px';
+                });
+            });
+        }
+        // 页面加载完成后初始化
+        window.addEventListener('DOMContentLoaded', init);
+    </script>
+
+
+</body></html>
