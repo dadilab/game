@@ -8,7 +8,7 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Font Awesome -->
   <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
-  <!-- 统一的 Tailwind 配置 -->
+  <!-- 配置Tailwind -->
   <script>
     tailwind.config = {
       theme: {
@@ -46,29 +46,26 @@
       .content-auto {
         content-visibility: auto;
       }
-      .glass-effect {
-        @apply bg-white bg-opacity-20 backdrop-blur-lg;
+      .result-item {
+        @apply p-3 border-b border-gray-100 hover:bg-gray-50 transition-colors;
       }
-      .card-shadow {
-        @apply shadow-lg hover:shadow-xl transition-shadow duration-300;
+      .result-item-header {
+        @apply font-medium text-sm text-gray-700;
       }
-      .btn-primary {
-        @apply bg-primary hover:bg-primary/90 text-white font-medium py-2 px-4 rounded-lg transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-opacity-50;
+      .result-item-value {
+        @apply text-lg font-semibold text-primary mt-1;
       }
-      .btn-secondary {
-        @apply bg-secondary hover:bg-secondary/90 text-white font-medium py-2 px-4 rounded-lg transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-secondary focus:ring-opacity-50;
+      .system-badge {
+        @apply text-xs px-2 py-0.5 rounded-full ml-2;
       }
-      .input-field {
-        @apply w-full px-4 py-2 border border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-300;
+      .metric-badge {
+        @apply bg-blue-100 text-blue-800 system-badge;
       }
-      .select-field {
-        @apply w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-300 appearance-none bg-white;
+      .imperial-badge {
+        @apply bg-green-100 text-green-800 system-badge;
       }
-      .tab-active {
-        @apply border-b-2 border-primary text-primary;
-      }
-      .tab-inactive {
-        @apply text-gray-500 hover:text-gray-700;
+      .chinese-badge {
+        @apply bg-yellow-100 text-yellow-800 system-badge;
       }
     }
   </style>
@@ -78,11 +75,11 @@
     <!-- 头部 -->
     <header class="text-center mb-8 animate-fade-in">
       <h1 class="text-4xl font-bold text-dark mb-2 bg-clip-text text-transparent bg-gradient-to-r from-primary to-secondary">全能单位换算器</h1>
-      <p class="text-gray-600">支持多种科学单位和日常单位的精确换算</p>
+      <p class="text-gray-600">实时显示所有单位换算结果，支持多种科学与日常单位</p>
     </header>
 
     <!-- 主内容区 -->
-    <main class="bg-white rounded-2xl card-shadow p-6 mb-8 animate-slide-up">
+    <main class="bg-white rounded-2xl shadow-xl p-6 mb-8 animate-slide-up">
       <!-- 单位类别选择标签页 -->
       <div class="mb-6 overflow-x-auto">
         <div class="flex space-x-1 md:space-x-4 min-w-max pb-2" id="category-tabs">
@@ -100,21 +97,6 @@
       </div>
     </main>
 
-    <!-- 换算历史记录 -->
-    <div class="bg-white rounded-2xl card-shadow p-6 animate-fade-in">
-      <div class="flex items-center justify-between mb-4">
-        <h2 class="text-xl font-semibold text-dark">换算历史记录</h2>
-        <button id="clear-history" class="text-sm text-gray-500 hover:text-red-500 transition-colors">
-          <i class="fa fa-trash-o mr-1"></i> 清空
-        </button>
-      </div>
-      <div id="history-list" class="max-h-48 overflow-y-auto">
-        <div class="text-center py-4 text-gray-400 text-sm">
-          暂无换算历史记录
-        </div>
-      </div>
-    </div>
-
     <!-- 底部 -->
     <footer class="mt-8 text-center text-gray-500 text-sm">
       <p>© 2025 全能单位换算器 | 设计与开发</p>
@@ -122,7 +104,7 @@
   </div>
 
   <script>
-    // 单位换算数据
+    // 完整单位换算数据
     const unitData = {
       length: {
         name: '长度单位',
@@ -138,6 +120,9 @@
           'pm': { name: '皮米', base: 1e-12, system: 'metric' },
           'ly': { name: '光年', base: 9.461e15, system: 'metric' },
           'AU': { name: '天文单位', base: 1.496e11, system: 'metric' },
+          'km_alt': { name: '公里', base: 1000, system: 'metric' },
+          'm_alt': { name: '公尺', base: 1, system: 'metric' },
+          'cm_alt': { name: '公分', base: 0.01, system: 'metric' },
           // 英制
           'in': { name: '英寸', base: 0.0254, system: 'imperial' },
           'inch': { name: '英寸', base: 0.0254, system: 'imperial' },
@@ -263,7 +248,7 @@
           'c': { name: '光速', base: 299792458, system: 'metric' },
           'mm/s': { name: '毫米/秒', base: 0.001, system: 'metric' },
           'um/s': { name: '微米/秒', base: 1e-6, system: 'metric' },
-          'AU': { name: '音速', base: 340.29, system: 'metric' },
+          'sound': { name: '音速', base: 340.29, system: 'metric' },
           'kmh': { name: '公里/时', base: 0.277778, system: 'metric' },
           // 英制
           'mach': { name: '马赫', base: 340.29, system: 'imperial' },
@@ -563,25 +548,14 @@
       }
     };
 
-    // 历史记录
-    let conversionHistory = [];
-
     // DOM 元素
     const categoryTabs = document.getElementById('category-tabs');
     const converterContent = document.getElementById('converter-content');
-    const historyList = document.getElementById('history-list');
-    const clearHistoryBtn = document.getElementById('clear-history');
 
     // 初始化页面
     function initPage() {
       // 创建单位类别标签页
       createCategoryTabs();
-      
-      // 加载历史记录
-      loadHistory();
-      
-      // 绑定事件
-      clearHistoryBtn.addEventListener('click', clearHistory);
     }
 
     // 创建单位类别标签页
@@ -591,18 +565,18 @@
       Object.keys(unitData).forEach((categoryKey, index) => {
         const category = unitData[categoryKey];
         const tab = document.createElement('button');
-        tab.className = `px-3 py-2 text-sm font-medium rounded-t-lg transition-colors ${index === 0 ? 'tab-active' : 'tab-inactive'}`;
+        tab.className = `px-3 py-2 text-sm font-medium rounded-t-lg transition-colors ${index === 0 ? 'border-b-2 border-primary text-primary' : 'text-gray-500 hover:text-gray-700'}`;
         tab.textContent = category.name;
         tab.dataset.category = categoryKey;
         
         tab.addEventListener('click', () => {
           // 更新标签页样式
           document.querySelectorAll('#category-tabs button').forEach(t => {
-            t.classList.remove('tab-active');
-            t.classList.add('tab-inactive');
+            t.classList.remove('border-b-2', 'border-primary', 'text-primary');
+            t.classList.add('text-gray-500', 'hover:text-gray-700');
           });
-          tab.classList.remove('tab-inactive');
-          tab.classList.add('tab-active');
+          tab.classList.remove('text-gray-500', 'hover:text-gray-700');
+          tab.classList.add('border-b-2', 'border-primary', 'text-primary');
           
           // 显示对应单位类别的换算器
           showConverter(categoryKey);
@@ -620,65 +594,68 @@
     // 显示单位换算器
     function showConverter(categoryKey) {
       const category = unitData[categoryKey];
+      const units = category.units;
+      const unitKeys = Object.keys(units);
       
       // 创建换算器HTML
       let html = `
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <!-- 输入部分 -->
-          <div class="bg-blue-50 rounded-xl p-6">
-            <div class="mb-4">
-              <label for="input-value" class="block text-sm font-medium text-gray-700 mb-1">输入值</label>
-              <input type="number" id="input-value" class="input-field" placeholder="请输入数值" step="any">
-            </div>
-            <div class="mb-4">
-              <label for="from-unit" class="block text-sm font-medium text-gray-700 mb-1">从</label>
-              <div class="relative">
-                <select id="from-unit" class="select-field pr-8">
-                  <option value="">请选择单位</option>
-                  ${createUnitOptions(category.units)}
-                </select>
-                <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
-                  <i class="fa fa-chevron-down text-xs"></i>
+          <div class="lg:col-span-1 space-y-6">
+            <div class="bg-blue-50 rounded-xl p-6">
+              <h3 class="text-lg font-semibold mb-4">输入值</h3>
+              <div class="space-y-4">
+                <div>
+                  <label for="input-value" class="block text-sm font-medium text-gray-700 mb-1">数值</label>
+                  <input type="number" id="input-value" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent" placeholder="请输入数值" value="1" step="any">
                 </div>
+                <div>
+                  <label for="base-unit" class="block text-sm font-medium text-gray-700 mb-1">基准单位</label>
+                  <div class="relative">
+                    <select id="base-unit" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent appearance-none">
+                      ${unitKeys.map(key => `
+                        <option value="${key}">${units[key].name} (${key})</option>
+                      `).join('')}
+                    </select>
+                    <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
+                      <i class="fa fa-chevron-down text-xs"></i>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div class="bg-gray-50 rounded-xl p-6">
+              <h3 class="text-lg font-semibold mb-4">单位系统筛选</h3>
+              <div class="space-y-2">
+                <label class="flex items-center">
+                  <input type="checkbox" id="filter-metric" class="form-checkbox h-5 w-5 text-primary" checked>
+                  <span class="ml-2 text-sm">公制单位</span>
+                </label>
+                <label class="flex items-center">
+                  <input type="checkbox" id="filter-imperial" class="form-checkbox h-5 w-5 text-primary" checked>
+                  <span class="ml-2 text-sm">英制单位</span>
+                </label>
+                <label class="flex items-center">
+                  <input type="checkbox" id="filter-chinese" class="form-checkbox h-5 w-5 text-primary" checked>
+                  <span class="ml-2 text-sm">市制单位</span>
+                </label>
               </div>
             </div>
           </div>
           
-          <!-- 输出部分 -->
-          <div class="bg-indigo-50 rounded-xl p-6">
-            <div class="mb-4">
-              <label for="output-value" class="block text-sm font-medium text-gray-700 mb-1">结果</label>
-              <input type="number" id="output-value" class="input-field" readonly step="any">
-            </div>
-            <div class="mb-4">
-              <label for="to-unit" class="block text-sm font-medium text-gray-700 mb-1">到</label>
-              <div class="relative">
-                <select id="to-unit" class="select-field pr-8">
-                  <option value="">请选择单位</option>
-                  ${createUnitOptions(category.units)}
-                </select>
-                <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
-                  <i class="fa fa-chevron-down text-xs"></i>
-                </div>
+          <!-- 结果显示部分 -->
+          <div class="lg:col-span-2">
+            <div class="bg-white border border-gray-200 rounded-xl overflow-hidden">
+              <div class="bg-gray-50 px-6 py-4 border-b border-gray-200">
+                <h3 class="text-lg font-semibold">所有单位换算结果</h3>
+                <p class="text-sm text-gray-500 mt-1">实时显示与基准单位的换算结果</p>
+              </div>
+              <div id="results-container" class="max-h-[500px] overflow-y-auto">
+                <!-- 结果将通过JavaScript动态生成 -->
               </div>
             </div>
           </div>
-        </div>
-        
-        <!-- 操作按钮 -->
-        <div class="flex flex-wrap justify-center gap-4 mt-6">
-          <button id="swap-btn" class="btn-secondary">
-            <i class="fa fa-refresh mr-2"></i>交换单位
-          </button>
-          <button id="copy-btn" class="btn-secondary">
-            <i class="fa fa-copy mr-2"></i>复制结果
-          </button>
-        </div>
-        
-        <!-- 换算公式 -->
-        <div class="mt-6 p-4 bg-gray-50 rounded-lg">
-          <h3 class="text-sm font-medium text-gray-700 mb-2">换算公式</h3>
-          <p id="formula" class="text-sm text-gray-600">请输入数值并选择单位进行换算</p>
         </div>
       `;
       
@@ -686,274 +663,212 @@
       
       // 获取元素
       const inputValue = document.getElementById('input-value');
-      const fromUnit = document.getElementById('from-unit');
-      const toUnit = document.getElementById('to-unit');
+      const baseUnit = document.getElementById('base-unit');
+      const filterMetric = document.getElementById('filter-metric');
+      const filterImperial = document.getElementById('filter-imperial');
+      const filterChinese = document.getElementById('filter-chinese');
       
-      // 绑定事件
-      inputValue.addEventListener('input', () => debounce(() => convertUnit(categoryKey), 300));
-      fromUnit.addEventListener('change', () => convertUnit(categoryKey));
-      toUnit.addEventListener('change', () => convertUnit(categoryKey));
-      document.getElementById('swap-btn').addEventListener('click', swapUnits);
-      document.getElementById('copy-btn').addEventListener('click', copyResult);
+      // 绑定事件 - 使用防抖处理输入事件
+      const debouncedConvert = debounce(() => {
+        convertToAllUnits(categoryKey);
+      }, 150);
+      
+      inputValue.addEventListener('input', debouncedConvert);
+      baseUnit.addEventListener('change', debouncedConvert);
+      filterMetric.addEventListener('change', debouncedConvert);
+      filterImperial.addEventListener('change', debouncedConvert);
+      filterChinese.addEventListener('change', debouncedConvert);
+      
+      // 初始计算一次
+      convertToAllUnits(categoryKey);
     }
 
-    // 创建单位选项
-    function createUnitOptions(units) {
-      let options = '';
-      
-      // 按单位系统分组
-      const systems = {
-        metric: { name: '公制', units: [] },
-        imperial: { name: '英制', units: [] },
-        chinese: { name: '市制', units: [] }
-      };
-      
-      Object.keys(units).forEach(unitKey => {
-        const unit = units[unitKey];
-        if (systems[unit.system]) {
-          systems[unit.system].units.push({ key: unitKey, ...unit });
-        } else {
-          // 如果单位系统不在预定义列表中，添加到公制
-          systems.metric.units.push({ key: unitKey, ...unit });
-        }
-      });
-      
-      // 生成选项HTML
-      Object.keys(systems).forEach(systemKey => {
-        const system = systems[systemKey];
-        if (system.units.length > 0) {
-          options += `<optgroup label="${system.name}">`;
-          system.units.forEach(unit => {
-            options += `<option value="${unit.key}">${unit.name} (${unit.key})</option>`;
-          });
-          options += '</optgroup>';
-        }
-      });
-      
-      return options;
-    }
-
-    // 单位换算
-    function convertUnit(categoryKey) {
+    // 转换为所有单位并显示结果
+    function convertToAllUnits(categoryKey) {
       const inputValue = document.getElementById('input-value').value;
-      const fromUnit = document.getElementById('from-unit').value;
-      const toUnit = document.getElementById('to-unit').value;
-      const outputValue = document.getElementById('output-value');
-      const formula = document.getElementById('formula');
+      const baseUnitKey = document.getElementById('base-unit').value;
+      const resultsContainer = document.getElementById('results-container');
+      
+      // 获取筛选条件
+      const showMetric = document.getElementById('filter-metric').checked;
+      const showImperial = document.getElementById('filter-imperial').checked;
+      const showChinese = document.getElementById('filter-chinese').checked;
       
       // 验证输入
-      if (!inputValue || !fromUnit || !toUnit) {
-        outputValue.value = '';
-        formula.textContent = '请输入数值并选择单位进行换算';
+      if (!inputValue || !baseUnitKey) {
+        resultsContainer.innerHTML = `
+          <div class="text-center py-10 text-gray-500">
+            <i class="fa fa-info-circle mb-2"></i> 请输入数值并选择基准单位
+          </div>
+        `;
         return;
       }
       
       const value = parseFloat(inputValue);
       const category = unitData[categoryKey];
-      const fromUnitData = category.units[fromUnit];
-      const toUnitData = category.units[toUnit];
+      const units = category.units;
+      const baseUnit = units[baseUnitKey];
       
-      let result;
-      let formulaText;
+      // 按单位系统分组
+      const results = {
+        metric: [],
+        imperial: [],
+        chinese: []
+      };
       
-      // 特殊处理温度单位
-      if (categoryKey === 'temperature') {
-        // 转换为开尔文（基础单位）
-        const kelvin = fromUnitData.toBase(value);
-        // 从开尔文转换为目标单位
-        result = toUnitData.fromBase(kelvin);
+      // 计算所有单位的结果
+      Object.keys(units).forEach(targetUnitKey => {
+        if (targetUnitKey === baseUnitKey) return; // 跳过基准单位
         
-        formulaText = `${value} ${fromUnitData.name} = ${result.toFixed(6)} ${toUnitData.name}`;
-      } else {
-        // 其他单位的换算
-        // 转换为基础单位
-        const baseValue = value * fromUnitData.base;
-        // 从基础单位转换为目标单位
-        result = baseValue / toUnitData.base;
+        const targetUnit = units[targetUnitKey];
+        let result;
         
-        formulaText = `${value} ${fromUnitData.name} = ${value} × ${fromUnitData.base} ÷ ${toUnitData.base} = ${result.toFixed(6)} ${toUnitData.name}`;
-      }
-      
-      // 显示结果
-      outputValue.value = result;
-      formula.textContent = formulaText;
-      
-      // 添加到历史记录
-      addToHistory({
-        category: category.name,
-        inputValue: value,
-        fromUnit: fromUnitData.name,
-        fromUnitSymbol: fromUnit,
-        outputValue: result,
-        toUnit: toUnitData.name,
-        toUnitSymbol: toUnit,
-        timestamp: new Date().toISOString()
+        // 特殊处理温度单位
+        if (categoryKey === 'temperature') {
+          // 转换为开尔文（基础单位）
+          const kelvin = baseUnit.toBase(value);
+          // 从开尔文转换为目标单位
+          result = targetUnit.fromBase(kelvin);
+        } else {
+          // 其他单位的换算
+          // 转换为基础单位
+          const baseValue = value * baseUnit.base;
+          // 从基础单位转换为目标单位
+          result = baseValue / targetUnit.base;
+        }
+        
+        // 只添加符合筛选条件的单位
+        if (
+          (targetUnit.system === 'metric' && showMetric) ||
+          (targetUnit.system === 'imperial' && showImperial) ||
+          (targetUnit.system === 'chinese' && showChinese)
+        ) {
+          results[targetUnit.system].push({
+            key: targetUnitKey,
+            name: targetUnit.name,
+            symbol: targetUnitKey,
+            value: result,
+            system: targetUnit.system
+          });
+        }
       });
-    }
-
-    // 交换单位
-    function swapUnits() {
-      const fromUnit = document.getElementById('from-unit');
-      const toUnit = document.getElementById('to-unit');
-      const inputValue = document.getElementById('input-value');
-      const outputValue = document.getElementById('output-value');
       
-      // 保存当前值
-      const tempUnit = fromUnit.value;
-      const tempValue = inputValue.value;
-      
-      // 交换单位和值
-      fromUnit.value = toUnit.value;
-      toUnit.value = tempUnit;
-      inputValue.value = outputValue.value;
-      outputValue.value = tempValue;
-    }
-
-    // 复制结果
-    function copyResult() {
-      const outputValue = document.getElementById('output-value');
-      
-      // 选择结果文本
-      outputValue.select();
-      outputValue.setSelectionRange(0, 99999); // 兼容移动设备
-      
-      // 复制到剪贴板
-      document.execCommand('copy');
-      
-      // 显示提示
-      alert('结果已复制到剪贴板');
-    }
-
-    // 添加到历史记录
-    function addToHistory(item) {
-      // 添加到历史记录数组
-      conversionHistory.unshift(item);
-      
-      // 限制历史记录数量
-      if (conversionHistory.length > 10) {
-        conversionHistory.pop();
-      }
-      
-      // 保存到本地存储
-      localStorage.setItem('conversionHistory', JSON.stringify(conversionHistory));
-      
-      // 更新历史记录显示
-      updateHistoryList();
-    }
-
-    // 加载历史记录
-    function loadHistory() {
-      const savedHistory = localStorage.getItem('conversionHistory');
-      if (savedHistory) {
-        conversionHistory = JSON.parse(savedHistory);
-        updateHistoryList();
-      }
-    }
-
-    // 更新历史记录显示
-    function updateHistoryList() {
-      if (conversionHistory.length === 0) {
-        historyList.innerHTML = `
-          <div class="text-center py-4 text-gray-400 text-sm">
-            暂无换算历史记录
-          </div>
-        `;
-        return;
-      }
-      
+      // 生成结果HTML
       let html = '';
-      conversionHistory.forEach((item, index) => {
-        const date = new Date(item.timestamp);
-        const timeString = `${date.getFullYear()}-${padZero(date.getMonth() + 1)}-${padZero(date.getDate())} ${padZero(date.getHours())}:${padZero(date.getMinutes())}`;
-        
+      
+      // 添加公制单位结果
+      if (showMetric && results.metric.length > 0) {
         html += `
-          <div class="flex items-center justify-between py-2 border-b border-gray-100 last:border-0 hover:bg-gray-50 px-2 rounded transition-colors">
-            <div class="flex-1">
-              <p class="text-sm font-medium">${item.inputValue} ${item.fromUnit} = ${item.outputValue.toFixed(6)} ${item.toUnit}</p>
-              <p class="text-xs text-gray-500">${item.category} · ${timeString}</p>
-            </div>
-            <div class="flex space-x-2">
-              <button class="text-gray-400 hover:text-primary transition-colors" onclick="useHistoryItem(${index})" title="使用此记录">
-                <i class="fa fa-refresh"></i>
-              </button>
-              <button class="text-gray-400 hover:text-red-500 transition-colors" onclick="deleteHistoryItem(${index})" title="删除此记录">
-                <i class="fa fa-trash-o"></i>
-              </button>
-            </div>
+          <div class="p-4 border-b border-gray-100 bg-blue-50">
+            <h4 class="font-medium text-blue-800">公制单位</h4>
           </div>
         `;
-      });
-      
-      historyList.innerHTML = html;
-    }
-
-    // 使用历史记录项
-    function useHistoryItem(index) {
-      const item = conversionHistory[index];
-      
-      // 找到对应的单位类别
-      let categoryKey = '';
-      Object.keys(unitData).forEach(key => {
-        if (unitData[key].name === item.category) {
-          categoryKey = key;
-        }
-      });
-      
-      if (!categoryKey) return;
-      
-      // 切换到对应的标签页
-      document.querySelectorAll('#category-tabs button').forEach(tab => {
-        if (tab.dataset.category === categoryKey) {
-          tab.click();
-        }
-      });
-      
-      // 填充值和单位
-      setTimeout(() => {
-        document.getElementById('input-value').value = item.inputValue;
         
-        // 设置单位
-        const fromUnitSelect = document.getElementById('from-unit');
-        const toUnitSelect = document.getElementById('to-unit');
-        
-        for (let i = 0; i < fromUnitSelect.options.length; i++) {
-          if (fromUnitSelect.options[i].value === item.fromUnitSymbol) {
-            fromUnitSelect.selectedIndex = i;
-            break;
-          }
-        }
-        
-        for (let i = 0; i < toUnitSelect.options.length; i++) {
-          if (toUnitSelect.options[i].value === item.toUnitSymbol) {
-            toUnitSelect.selectedIndex = i;
-            break;
-          }
-        }
-        
-        // 执行换算
-        convertUnit(categoryKey);
-      }, 100);
-    }
-
-    // 清空历史记录
-    function clearHistory() {
-      if (confirm('确定要清空所有换算历史记录吗？')) {
-        conversionHistory = [];
-        localStorage.removeItem('conversionHistory');
-        updateHistoryList();
+        results.metric.forEach(item => {
+          html += createResultItem(item, value, baseUnit);
+        });
       }
-    }
-    
-    // 删除单个历史记录项
-    function deleteHistoryItem(index) {
-      if (confirm('确定要删除这条历史记录吗？')) {
-        conversionHistory.splice(index, 1);
-        localStorage.setItem('conversionHistory', JSON.stringify(conversionHistory));
-        updateHistoryList();
+      
+      // 添加英制单位结果
+      if (showImperial && results.imperial.length > 0) {
+        html += `
+          <div class="p-4 border-b border-gray-100 bg-green-50">
+            <h4 class="font-medium text-green-800">英制单位</h4>
+          </div>
+        `;
+        
+        results.imperial.forEach(item => {
+          html += createResultItem(item, value, baseUnit);
+        });
       }
+      
+      // 添加市制单位结果
+      if (showChinese && results.chinese.length > 0) {
+        html += `
+          <div class="p-4 border-b border-gray-100 bg-yellow-50">
+            <h4 class="font-medium text-yellow-800">市制单位</h4>
+          </div>
+        `;
+        
+        results.chinese.forEach(item => {
+          html += createResultItem(item, value, baseUnit);
+        });
+      }
+      
+      // 如果没有结果显示提示
+      if (html === '') {
+        html = `
+          <div class="text-center py-10 text-gray-500">
+            <i class="fa fa-filter mb-2"></i> 没有符合筛选条件的单位
+          </div>
+        `;
+      }
+      
+      // 显示基准单位信息
+      const baseUnitHtml = `
+        <div class="p-4 border-b border-gray-200 bg-primary/5">
+          <div class="result-item-header">
+            基准单位: ${baseUnit.name} (${baseUnitKey})
+            <span class="${baseUnit.system === 'metric' ? 'metric-badge' : baseUnit.system === 'imperial' ? 'imperial-badge' : 'chinese-badge'}">
+              ${baseUnit.system === 'metric' ? '公制' : baseUnit.system === 'imperial' ? '英制' : '市制'}
+            </span>
+          </div>
+          <div class="result-item-value">${formatNumber(value)} ${baseUnitKey}</div>
+        </div>
+      `;
+      
+      resultsContainer.innerHTML = baseUnitHtml + html;
     }
 
-    // 防抖函数
+    // 创建结果项HTML
+    function createResultItem(item, originalValue, baseUnit) {
+      return `
+        <div class="result-item">
+          <div class="result-item-header">
+            ${item.name} (${item.symbol})
+            <span class="${item.system === 'metric' ? 'metric-badge' : item.system === 'imperial' ? 'imperial-badge' : 'chinese-badge'}">
+              ${item.system === 'metric' ? '公制' : item.system === 'imperial' ? '英制' : '市制'}
+            </span>
+          </div>
+          <div class="result-item-value">${formatNumber(item.value)}</div>
+          <div class="text-xs text-gray-500 mt-1">
+            = ${formatNumber(originalValue)} ${baseUnit.name}
+          </div>
+        </div>
+      `;
+    }
+
+    // 格式化数字（添加千位分隔符，控制小数位数）
+    function formatNumber(num, decimalPlaces = 6) {
+      // 处理NaN
+      if (isNaN(num)) return '0';
+      
+      // 处理非常大或非常小的数字，使用科学计数法
+      if (Math.abs(num) >= 1e10 || Math.abs(num) < 1e-6) {
+        return num.toExponential(6);
+      }
+      
+      // 对于普通数字，根据大小决定保留的小数位数
+      let precision = decimalPlaces;
+      if (num >= 1000) precision = 2;
+      else if (num >= 100) precision = 3;
+      else if (num >= 10) precision = 4;
+      
+      // 格式化数字
+      let formatted = parseFloat(num.toFixed(precision)).toString();
+      
+      // 添加千位分隔符
+      if (formatted.includes('e')) {
+        return formatted;
+      }
+      
+      const parts = formatted.split('.');
+      parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+      
+      return parts.join('.');
+    }
+
+    // 防抖函数 - 优化性能，避免频繁计算
     function debounce(func, wait) {
       let timeout;
       return function() {
@@ -962,11 +877,6 @@
         clearTimeout(timeout);
         timeout = setTimeout(() => func.apply(context, args), wait);
       };
-    }
-    
-    // 辅助函数：数字补零
-    function padZero(num) {
-      return num < 10 ? `0${num}` : num;
     }
 
     // 页面加载完成后初始化
