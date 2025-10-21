@@ -1,0 +1,976 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>全能单位换算器</title>
+  <!-- Tailwind CSS v3 -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Font Awesome -->
+  <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+  <!-- 统一的 Tailwind 配置 -->
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: '#3b82f6',
+            secondary: '#6366f1',
+            accent: '#10b981',
+            dark: '#1e293b',
+            light: '#f8fafc'
+          },
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+          },
+          animation: {
+            'fade-in': 'fadeIn 0.5s ease-in-out',
+            'slide-up': 'slideUp 0.3s ease-out',
+          },
+          keyframes: {
+            fadeIn: {
+              '0%': { opacity: '0' },
+              '100%': { opacity: '1' },
+            },
+            slideUp: {
+              '0%': { transform: 'translateY(20px)', opacity: '0' },
+              '100%': { transform: 'translateY(0)', opacity: '1' },
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style type="text/tailwindcss">
+    @layer utilities {
+      .content-auto {
+        content-visibility: auto;
+      }
+      .glass-effect {
+        @apply bg-white bg-opacity-20 backdrop-blur-lg;
+      }
+      .card-shadow {
+        @apply shadow-lg hover:shadow-xl transition-shadow duration-300;
+      }
+      .btn-primary {
+        @apply bg-primary hover:bg-primary/90 text-white font-medium py-2 px-4 rounded-lg transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-opacity-50;
+      }
+      .btn-secondary {
+        @apply bg-secondary hover:bg-secondary/90 text-white font-medium py-2 px-4 rounded-lg transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-secondary focus:ring-opacity-50;
+      }
+      .input-field {
+        @apply w-full px-4 py-2 border border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-300;
+      }
+      .select-field {
+        @apply w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-300 appearance-none bg-white;
+      }
+      .tab-active {
+        @apply border-b-2 border-primary text-primary;
+      }
+      .tab-inactive {
+        @apply text-gray-500 hover:text-gray-700;
+      }
+    }
+  </style>
+</head>
+<body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen font-sans text-gray-800">
+  <div class="container mx-auto px-4 py-8 max-w-6xl">
+    <!-- 头部 -->
+    <header class="text-center mb-8 animate-fade-in">
+      <h1 class="text-4xl font-bold text-dark mb-2 bg-clip-text text-transparent bg-gradient-to-r from-primary to-secondary">全能单位换算器</h1>
+      <p class="text-gray-600">支持多种科学单位和日常单位的精确换算</p>
+    </header>
+
+    <!-- 主内容区 -->
+    <main class="bg-white rounded-2xl card-shadow p-6 mb-8 animate-slide-up">
+      <!-- 单位类别选择标签页 -->
+      <div class="mb-6 overflow-x-auto">
+        <div class="flex space-x-1 md:space-x-4 min-w-max pb-2" id="category-tabs">
+          <!-- 标签页将通过 JavaScript 动态生成 -->
+        </div>
+      </div>
+
+      <!-- 换算内容区 -->
+      <div id="converter-content" class="animate-fade-in">
+        <!-- 换算内容将通过 JavaScript 动态生成 -->
+        <div class="text-center py-12 text-gray-500">
+          <i class="fa fa-exchange text-4xl mb-4"></i>
+          <p>请选择一个单位类别开始换算</p>
+        </div>
+      </div>
+    </main>
+
+    <!-- 换算历史记录 -->
+    <div class="bg-white rounded-2xl card-shadow p-6 animate-fade-in">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-xl font-semibold text-dark">换算历史记录</h2>
+        <button id="clear-history" class="text-sm text-gray-500 hover:text-red-500 transition-colors">
+          <i class="fa fa-trash-o mr-1"></i> 清空
+        </button>
+      </div>
+      <div id="history-list" class="max-h-48 overflow-y-auto">
+        <div class="text-center py-4 text-gray-400 text-sm">
+          暂无换算历史记录
+        </div>
+      </div>
+    </div>
+
+    <!-- 底部 -->
+    <footer class="mt-8 text-center text-gray-500 text-sm">
+      <p>© 2025 全能单位换算器 | 设计与开发</p>
+    </footer>
+  </div>
+
+  <script>
+    // 单位换算数据
+    const unitData = {
+      length: {
+        name: '长度单位',
+        units: {
+          // 公制
+          'km': { name: '千米', base: 1000, system: 'metric' },
+          'm': { name: '米', base: 1, system: 'metric' },
+          'dm': { name: '分米', base: 0.1, system: 'metric' },
+          'cm': { name: '厘米', base: 0.01, system: 'metric' },
+          'mm': { name: '毫米', base: 0.001, system: 'metric' },
+          'um': { name: '微米', base: 1e-6, system: 'metric' },
+          'nm': { name: '纳米', base: 1e-9, system: 'metric' },
+          'pm': { name: '皮米', base: 1e-12, system: 'metric' },
+          'ly': { name: '光年', base: 9.461e15, system: 'metric' },
+          'AU': { name: '天文单位', base: 1.496e11, system: 'metric' },
+          // 英制
+          'in': { name: '英寸', base: 0.0254, system: 'imperial' },
+          'inch': { name: '英寸', base: 0.0254, system: 'imperial' },
+          'ft': { name: '英尺', base: 0.3048, system: 'imperial' },
+          'yd': { name: '码', base: 0.9144, system: 'imperial' },
+          'mi': { name: '英里', base: 1609.34, system: 'imperial' },
+          'nmi': { name: '海里', base: 1852, system: 'imperial' },
+          'fm': { name: '英寻', base: 1.8288, system: 'imperial' },
+          'fg': { name: '弗隆', base: 201.168, system: 'imperial' },
+          'mil': { name: '密耳', base: 2.54e-5, system: 'imperial' },
+          // 市制
+          'li': { name: '里', base: 500, system: 'chinese' },
+          'zhang': { name: '丈', base: 3.3333, system: 'chinese' },
+          'chi': { name: '尺', base: 0.3333, system: 'chinese' },
+          'cun': { name: '寸', base: 0.0333, system: 'chinese' },
+          'fen': { name: '分', base: 0.0033, system: 'chinese' },
+          'li_cun': { name: '厘', base: 0.00033, system: 'chinese' },
+          'hao': { name: '毫', base: 3.333e-5, system: 'chinese' }
+        }
+      },
+      mass: {
+        name: '质量单位',
+        units: {
+          // 公制
+          'kg': { name: '千克', base: 1, system: 'metric' },
+          'g': { name: '克', base: 0.001, system: 'metric' },
+          'mg': { name: '毫克', base: 1e-6, system: 'metric' },
+          'ug': { name: '微克', base: 1e-9, system: 'metric' },
+          't': { name: '吨', base: 1000, system: 'metric' },
+          'q': { name: '公担', base: 100, system: 'metric' },
+          'ng': { name: '纳克', base: 1e-12, system: 'metric' },
+          'pg': { name: '皮克', base: 1e-15, system: 'metric' },
+          'fg': { name: '飞克', base: 1e-18, system: 'metric' },
+          'ag': { name: '阿克', base: 1e-21, system: 'metric' },
+          'zg': { name: '介克', base: 1e-24, system: 'metric' },
+          'yg': { name: '幺克', base: 1e-27, system: 'metric' },
+          'rg': { name: '洛克', base: 1e-30, system: 'metric' },
+          'Qg': { name: '奎克', base: 1e30, system: 'metric' },
+          'Rg': { name: '罗克', base: 1e33, system: 'metric' },
+          'Yg': { name: '佑克', base: 1e24, system: 'metric' },
+          'Zg': { name: '皆克', base: 1e21, system: 'metric' },
+          'Eg': { name: '艾克', base: 1e18, system: 'metric' },
+          'Pg': { name: '拍克', base: 1e15, system: 'metric' },
+          'Tg': { name: '太克', base: 1e12, system: 'metric' },
+          'Gg': { name: '吉克', base: 1e9, system: 'metric' },
+          'Mg': { name: '兆克', base: 1e6, system: 'metric' },
+          'kg_alt': { name: '公斤', base: 1, system: 'metric' },
+          // 英制
+          'lb': { name: '磅', base: 0.453592, system: 'imperial' },
+          'oz': { name: '盎司', base: 0.0283495, system: 'imperial' },
+          'ct': { name: '克拉', base: 0.0002, system: 'imperial' },
+          'gr': { name: '格令', base: 6.479891e-5, system: 'imperial' },
+          'lt': { name: '长吨', base: 1016.05, system: 'imperial' },
+          'st': { name: '短吨', base: 907.185, system: 'imperial' },
+          'dr': { name: '打兰', base: 1.771845e-3, system: 'imperial' },
+          // 市制
+          'dan': { name: '担', base: 50, system: 'chinese' },
+          'jin': { name: '斤', base: 0.5, system: 'chinese' },
+          'liang': { name: '两', base: 0.05, system: 'chinese' },
+          'qian': { name: '钱', base: 0.005, system: 'chinese' },
+          'fen_mass': { name: '分', base: 0.0005, system: 'chinese' }
+        }
+      },
+      volume: {
+        name: '体积单位',
+        units: {
+          // 公制
+          'km3': { name: '立方千米', base: 1e9, system: 'metric' },
+          'm3': { name: '立方米', base: 1, system: 'metric' },
+          'dm3': { name: '立方分米', base: 0.001, system: 'metric' },
+          'cm3': { name: '立方厘米', base: 1e-6, system: 'metric' },
+          'mm3': { name: '立方毫米', base: 1e-9, system: 'metric' },
+          'l': { name: '升', base: 0.001, system: 'metric' },
+          'dl': { name: '分升', base: 1e-4, system: 'metric' },
+          'ml': { name: '毫升', base: 1e-6, system: 'metric' },
+          'cl': { name: '厘升', base: 1e-5, system: 'metric' },
+          'hl': { name: '公石', base: 0.1, system: 'metric' },
+          'ul': { name: '微升', base: 1e-9, system: 'metric' },
+          // 英制
+          'cuft': { name: '立方英尺', base: 0.0283168, system: 'imperial' },
+          'cuin': { name: '立方英寸', base: 1.63871e-5, system: 'imperial' },
+          'cuyard': { name: '立方码', base: 0.764555, system: 'imperial' },
+          'acreft': { name: '亩英尺', base: 1233.48, system: 'imperial' },
+          'ukgal': { name: '英制加仑', base: 0.00454609, system: 'imperial' },
+          'usgal': { name: '美制加仑', base: 0.00378541, system: 'imperial' },
+          'ukoz': { name: '英制液体盎司', base: 2.84131e-5, system: 'imperial' },
+          'usoz': { name: '美制液体盎司', base: 2.95735e-5, system: 'imperial' },
+          'bbl': { name: '桶', base: 0.158987, system: 'imperial' },
+          'pt': { name: '品脱', base: 0.000568261, system: 'imperial' }
+        }
+      },
+      energy: {
+        name: '功/能/热单位',
+        units: {
+          // 公制
+          'kwh': { name: '度(千瓦·时)', base: 3.6e6, system: 'metric' },
+          'kw_h': { name: '千瓦·时', base: 3.6e6, system: 'metric' },
+          'J': { name: '焦耳', base: 1, system: 'metric' },
+          'kJ': { name: '千焦', base: 1000, system: 'metric' },
+          'cal': { name: '卡', base: 4.184, system: 'metric' },
+          'kcal': { name: '千卡', base: 4184, system: 'metric' },
+          'psh': { name: '米制马力·时', base: 2.647796e6, system: 'metric' },
+          'kgm': { name: '公斤·米', base: 9.80665, system: 'metric' },
+          'Ws': { name: '瓦·秒', base: 1, system: 'metric' },
+          'Wh': { name: '瓦·时', base: 3600, system: 'metric' },
+          'calorie': { name: '卡路里', base: 4.184, system: 'metric' },
+          'Mcal': { name: '兆卡', base: 4.184e6, system: 'metric' },
+          'erg': { name: '尔格', base: 1e-7, system: 'metric' },
+          'eV': { name: '电子伏特', base: 1.602176634e-19, system: 'metric' },
+          // 英制
+          'btu': { name: '英热单位', base: 1055.06, system: 'imperial' },
+          'hph': { name: '英制马力·时', base: 2.68452e6, system: 'imperial' },
+          'ftlb': { name: '英尺·磅', base: 1.35582, system: 'imperial' }
+        }
+      },
+      speed: {
+        name: '速度单位',
+        units: {
+          // 公制
+          'm/s': { name: '米/秒', base: 1, system: 'metric' },
+          'km/s': { name: '千米/秒', base: 1000, system: 'metric' },
+          'km/h': { name: '千米/时', base: 0.277778, system: 'metric' },
+          'c': { name: '光速', base: 299792458, system: 'metric' },
+          'mm/s': { name: '毫米/秒', base: 0.001, system: 'metric' },
+          'um/s': { name: '微米/秒', base: 1e-6, system: 'metric' },
+          'AU': { name: '音速', base: 340.29, system: 'metric' },
+          'kmh': { name: '公里/时', base: 0.277778, system: 'metric' },
+          // 英制
+          'mach': { name: '马赫', base: 340.29, system: 'imperial' },
+          'mile/h': { name: '英里/时', base: 0.44704, system: 'imperial' },
+          'in/s': { name: '英寸/秒', base: 0.0254, system: 'imperial' },
+          'mi/s': { name: '英里/秒', base: 1609.34, system: 'imperial' },
+          'ft/s': { name: '英尺/秒', base: 0.3048, system: 'imperial' },
+          'ft/m': { name: '英尺/分', base: 0.00508, system: 'imperial' },
+          'Nm/h': { name: '航海海里/时', base: 0.514444, system: 'imperial' },
+          'kt': { name: '节', base: 0.514444, system: 'imperial' },
+          'Nm/s': { name: '海里/秒', base: 1852, system: 'imperial' }
+        }
+      },
+      density: {
+        name: '密度单位',
+        units: {
+          // 公制
+          'kg/cm3': { name: '千克/立方厘米', base: 1e6, system: 'metric' },
+          'kg/dm3': { name: '千克/立方分米', base: 1000, system: 'metric' },
+          'kg/m3': { name: '千克/立方米', base: 1, system: 'metric' },
+          'g/cm3': { name: '克/立方厘米', base: 1000, system: 'metric' },
+          'g/dm3': { name: '克/立方分米', base: 1, system: 'metric' },
+          'g/m3': { name: '克/立方米', base: 0.001, system: 'metric' },
+          'mg/cm3': { name: '毫克/立方厘米', base: 1, system: 'metric' },
+          'mg/dm3': { name: '毫克/立方分米', base: 0.001, system: 'metric' },
+          'mg/m3': { name: '毫克/立方米', base: 1e-6, system: 'metric' },
+          // 英制
+          'lb/in3': { name: '磅/立方英寸', base: 27679.9, system: 'imperial' },
+          'lb/ft3': { name: '磅/立方英尺', base: 16.0185, system: 'imperial' },
+          'lb/usgal': { name: '磅/美加仑', base: 119.826, system: 'imperial' },
+          'lb/ukgal': { name: '磅/英加仑', base: 99.7763, system: 'imperial' },
+          'lb/bbl': { name: '磅/桶', base: 2.85301, system: 'imperial' },
+          'oz/gal': { name: '盎司/加仑', base: 7.48915, system: 'imperial' }
+        }
+      },
+      force: {
+        name: '力单位',
+        units: {
+          // 公制
+          'N': { name: '牛', base: 1, system: 'metric' },
+          'kN': { name: '千牛', base: 1000, system: 'metric' },
+          'kgf': { name: '千克力', base: 9.80665, system: 'metric' },
+          'gf': { name: '克力', base: 0.00980665, system: 'metric' },
+          'tf': { name: '公吨力', base: 9806.65, system: 'metric' },
+          'mN': { name: '毫牛', base: 0.001, system: 'metric' },
+          'nN': { name: '纳牛', base: 1e-9, system: 'metric' },
+          'uN': { name: '微牛', base: 1e-6, system: 'metric' },
+          'MN': { name: '百万牛顿', base: 1e6, system: 'metric' },
+          'GN': { name: '吉牛顿', base: 1e9, system: 'metric' },
+          'kgf_alt': { name: '公斤力', base: 9.80665, system: 'metric' },
+          'mgf': { name: '毫克力', base: 9.80665e-6, system: 'metric' },
+          'tf_metric': { name: '米制吨力', base: 9806.65, system: 'metric' },
+          // 英制
+          'kip': { name: '千磅力', base: 4448.22, system: 'imperial' },
+          'dyn': { name: '达因', base: 1e-5, system: 'imperial' },
+          'ton_force_us': { name: '美制吨力', base: 8896.44, system: 'imperial' },
+          'ton_force_uk': { name: '英制吨力', base: 9964.02, system: 'imperial' },
+          'pdl': { name: '磅达', base: 0.138255, system: 'imperial' }
+        }
+      },
+      pressure: {
+        name: '压强单位',
+        units: {
+          'Pa': { name: '帕斯卡', base: 1, system: 'metric' },
+          'MPa': { name: '兆帕', base: 1e6, system: 'metric' },
+          'kPa': { name: '千帕', base: 1000, system: 'metric' },
+          'hPa': { name: '百帕', base: 100, system: 'metric' },
+          'atm': { name: '标准大气压', base: 101325, system: 'metric' },
+          'mmHg': { name: '毫米汞柱', base: 133.322, system: 'metric' },
+          'inHg': { name: '英寸汞柱', base: 3386.39, system: 'imperial' },
+          'bar': { name: '巴', base: 1e5, system: 'metric' },
+          'mbar': { name: '毫巴', base: 100, system: 'metric' },
+          'psf': { name: '磅力/平方英尺', base: 47.8803, system: 'imperial' },
+          'psi': { name: '磅力/平方英寸', base: 6894.76, system: 'imperial' },
+          'mmH2O': { name: '毫米水柱', base: 9.80665, system: 'metric' },
+          'kgf/cm2': { name: '公斤力/平方厘米', base: 98066.5, system: 'metric' },
+          'kgf/m2': { name: '公斤力/平方米', base: 9.80665, system: 'metric' }
+        }
+      },
+      power: {
+        name: '功率单位',
+        units: {
+          // 公制
+          'kW': { name: '千瓦', base: 1000, system: 'metric' },
+          'ps': { name: '米制马力', base: 735.499, system: 'metric' },
+          'kgm/s': { name: '公斤·米/秒', base: 9.80665, system: 'metric' },
+          'kcal/s': { name: '千卡/秒', base: 4184, system: 'metric' },
+          'Btu/s': { name: '英热单位/秒', base: 1055.06, system: 'metric' },
+          'ftlb/s': { name: '英尺·磅/秒', base: 1.35582, system: 'metric' },
+          'J/s': { name: '焦耳/秒', base: 1, system: 'metric' },
+          'Nm/s': { name: '牛顿·米/秒', base: 1, system: 'metric' },
+          'dW': { name: '分瓦', base: 0.1, system: 'metric' },
+          'cW': { name: '厘瓦', base: 0.01, system: 'metric' },
+          'mW': { name: '毫瓦', base: 0.001, system: 'metric' },
+          'μW': { name: '微瓦', base: 1e-6, system: 'metric' },
+          'nW': { name: '纳瓦', base: 1e-9, system: 'metric' },
+          'pW': { name: '皮瓦', base: 1e-12, system: 'metric' },
+          'fW': { name: '飞瓦', base: 1e-15, system: 'metric' },
+          'aW': { name: '阿瓦', base: 1e-18, system: 'metric' },
+          'zW': { name: '仄瓦', base: 1e-21, system: 'metric' },
+          'yW': { name: '幺瓦', base: 1e-24, system: 'metric' },
+          'daW': { name: '十瓦', base: 10, system: 'metric' },
+          'hW': { name: '百瓦', base: 100, system: 'metric' },
+          'MW': { name: '兆瓦', base: 1e6, system: 'metric' },
+          'GW': { name: '吉瓦', base: 1e9, system: 'metric' },
+          'TW': { name: '太瓦', base: 1e12, system: 'metric' },
+          'PW': { name: '帕瓦', base: 1e15, system: 'metric' },
+          'EW': { name: '艾瓦', base: 1e18, system: 'metric' },
+          'ZW': { name: '泽瓦', base: 1e21, system: 'metric' },
+          'YW': { name: '尧瓦', base: 1e24, system: 'metric' },
+          // 英制
+          'hp': { name: '英制马力', base: 745.7, system: 'imperial' }
+        }
+      },
+      temperature: {
+        name: '温度单位',
+        units: {
+          'C': { 
+            name: '摄氏度', 
+            toBase: (value) => value + 273.15,
+            fromBase: (value) => value - 273.15,
+            system: 'metric'
+          },
+          'F': { 
+            name: '华氏度', 
+            toBase: (value) => (value - 32) * 5/9 + 273.15,
+            fromBase: (value) => (value - 273.15) * 9/5 + 32,
+            system: 'imperial'
+          },
+          'K': { 
+            name: '开氏度', 
+            toBase: (value) => value,
+            fromBase: (value) => value,
+            system: 'metric'
+          },
+          'R': { 
+            name: '兰氏度', 
+            toBase: (value) => value * 5/9,
+            fromBase: (value) => value * 9/5,
+            system: 'imperial'
+          },
+          'Re': { 
+            name: '列氏度', 
+            toBase: (value) => value * 5/4 + 273.15,
+            fromBase: (value) => (value - 273.15) * 4/5,
+            system: 'metric'
+          }
+        }
+      },
+      storage: {
+        name: '存储单位',
+        units: {
+          'bit': { name: '比特', base: 1, system: 'metric' },
+          'B': { name: '字节', base: 8, system: 'metric' },
+          'KB': { name: '千字节', base: 8 * 1024, system: 'metric' },
+          'MB': { name: '兆字节', base: 8 * 1024 * 1024, system: 'metric' },
+          'GB': { name: '千兆字节', base: 8 * 1024 * 1024 * 1024, system: 'metric' },
+          'TB': { name: '太字节', base: 8 * 1024 ** 4, system: 'metric' },
+          'PB': { name: '拍字节', base: 8 * 1024 ** 5, system: 'metric' },
+          'EB': { name: '艾字节', base: 8 * 1024 ** 6, system: 'metric' }
+        }
+      },
+      angle: {
+        name: '角度单位',
+        units: {
+          // 公制
+          'circle': { name: '圆周', base: 2 * Math.PI, system: 'metric' },
+          'right': { name: '直角', base: Math.PI / 2, system: 'metric' },
+          'gon': { name: '百分度', base: Math.PI / 200, system: 'metric' },
+          'minute': { name: '分', base: Math.PI / (180 * 60), system: 'metric' },
+          'second': { name: '秒', base: Math.PI / (180 * 3600), system: 'metric' },
+          'rad': { name: '弧度', base: 1, system: 'metric' },
+          'mrad': { name: '毫弧度', base: 0.001, system: 'metric' },
+          // 角度制
+          'mas': { name: '毫秒', base: Math.PI / (180 * 3600 * 1000), system: 'imperial' },
+          'μas': { name: '微秒', base: Math.PI / (180 * 3600 * 1e6), system: 'imperial' }
+        }
+      },
+      currency: {
+        name: '人民币单位',
+        units: {
+          'yuan': { name: '元', base: 1, system: 'chinese' },
+          'jiao': { name: '角', base: 0.1, system: 'chinese' },
+          'fen': { name: '分', base: 0.01, system: 'chinese' }
+        }
+      },
+      illuminance: {
+        name: '光照度单位',
+        units: {
+          // 公制
+          'ph': { name: '厘米烛光', base: 10000, system: 'metric' },
+          'lm/cm2': { name: '流明/平方厘米', base: 10000, system: 'metric' },
+          'lm/m2': { name: '流明/平方米', base: 1, system: 'metric' },
+          'ph_alt': { name: '辐透', base: 10000, system: 'metric' },
+          'mlx': { name: '毫勒克斯', base: 0.001, system: 'metric' },
+          'μlx': { name: '微勒克斯', base: 1e-6, system: 'metric' },
+          'klx': { name: '千勒克斯', base: 1000, system: 'metric' },
+          'nox': { name: '诺克斯', base: 1, system: 'metric' },
+          // 英制
+          'lm/in2': { name: '流明/平方英寸', base: 1550, system: 'imperial' },
+          'lm/ft2': { name: '流明/平方英尺', base: 10.7639, system: 'imperial' },
+          'fc': { name: '英尺烛光', base: 10.7639, system: 'imperial' }
+        }
+      },
+      torque: {
+        name: '力矩单位',
+        units: {
+          // 公制
+          'μNm': { name: '微牛米', base: 1e-6, system: 'metric' },
+          'mNm': { name: '毫牛米', base: 0.001, system: 'metric' },
+          'kN·m': { name: '千牛米', base: 1000, system: 'metric' },
+          'MN·m': { name: '兆牛米', base: 1e6, system: 'metric' },
+          'kgf·m': { name: '千克力米', base: 9.80665, system: 'metric' },
+          'kgfm': { name: '公斤力米', base: 9.80665, system: 'metric' },
+          'dyn·cm': { name: '达因厘米', base: 1e-7, system: 'metric' },
+          // 英制
+          'lbf·ft': { name: '英尺磅', base: 1.35582, system: 'imperial' },
+          'lbfft': { name: '磅力英尺', base: 1.35582, system: 'imperial' },
+          'lbf·in': { name: '英寸磅', base: 0.112985, system: 'imperial' },
+          'lbfin': { name: '磅力英寸', base: 0.112985, system: 'imperial' },
+          'ozf·ft': { name: '盎司力英尺', base: 0.084739, system: 'imperial' },
+          'ozfin': { name: '盎司力英寸', base: 0.00706155, system: 'imperial' }
+        }
+      },
+      resistance: {
+        name: '电阻单位',
+        units: {
+          'kΩ': { name: '千欧', base: 1000, system: 'metric' },
+          'mΩ': { name: '毫欧', base: 0.001, system: 'metric' },
+          'μΩ': { name: '微欧', base: 1e-6, system: 'metric' },
+          'nΩ': { name: '纳欧', base: 1e-9, system: 'metric' },
+          'MΩ': { name: '兆欧', base: 1e6, system: 'metric' },
+          'GΩ': { name: '吉欧', base: 1e9, system: 'metric' },
+          'abΩ': { name: '绝对欧姆', base: 1e-9, system: 'metric' }
+        }
+      },
+      time: {
+        name: '时间单位',
+        units: {
+          'yr': { name: '年', base: 31536000, system: 'metric' },
+          'month': { name: '月', base: 2592000, system: 'metric' },
+          'week': { name: '周', base: 604800, system: 'metric' },
+          'd': { name: '天', base: 86400, system: 'metric' },
+          'h': { name: '时', base: 3600, system: 'metric' },
+          'min': { name: '分', base: 60, system: 'metric' },
+          's': { name: '秒', base: 1, system: 'metric' },
+          'ms': { name: '毫秒', base: 0.001, system: 'metric' },
+          'μs': { name: '微秒', base: 1e-6, system: 'metric' },
+          'ns': { name: '纳秒', base: 1e-9, system: 'metric' }
+        }
+      },
+      area: {
+        name: '面积单位',
+        units: {
+          // 公制
+          'km2': { name: '平方千米', base: 1e6, system: 'metric' },
+          'ha': { name: '公顷', base: 10000, system: 'metric' },
+          'are': { name: '公亩', base: 100, system: 'metric' },
+          'm2': { name: '平方米', base: 1, system: 'metric' },
+          'dm2': { name: '平方分米', base: 0.01, system: 'metric' },
+          'cm2': { name: '平方厘米', base: 1e-4, system: 'metric' },
+          'mm2': { name: '平方毫米', base: 1e-6, system: 'metric' },
+          'km2_alt': { name: '平方公里', base: 1e6, system: 'metric' },
+          'hm2': { name: '平方百米', base: 10000, system: 'metric' },
+          // 英制
+          'acre': { name: '英亩', base: 4046.86, system: 'imperial' },
+          'sq.mi': { name: '平方英里', base: 2589990, system: 'imperial' },
+          'sq.yd': { name: '平方码', base: 0.836127, system: 'imperial' },
+          'sq.ft': { name: '平方英尺', base: 0.092903, system: 'imperial' },
+          'sq.in': { name: '平方英寸', base: 6.4516e-4, system: 'imperial' },
+          'sq.rd': { name: '平方竿', base: 25.2929, system: 'imperial' },
+          // 市制
+          'qing': { name: '顷', base: 66666.67, system: 'chinese' },
+          'mu': { name: '亩', base: 666.6667, system: 'chinese' },
+          'fen_area': { name: '分', base: 66.6667, system: 'chinese' },
+          'sq.chi': { name: '平方尺', base: 0.111111, system: 'chinese' },
+          'sq.cun': { name: '平方寸', base: 0.001111, system: 'chinese' }
+        }
+      },
+      voltage: {
+        name: '电压单位',
+        units: {
+          'kV': { name: '千伏', base: 1000, system: 'metric' },
+          'V': { name: '伏特', base: 1, system: 'metric' },
+          'mV': { name: '毫伏', base: 0.001, system: 'metric' },
+          'μV': { name: '微伏', base: 1e-6, system: 'metric' }
+        }
+      },
+      current: {
+        name: '电流单位',
+        units: {
+          'kA': { name: '千安', base: 1000, system: 'metric' },
+          'A': { name: '安培', base: 1, system: 'metric' },
+          'mA': { name: '毫安', base: 0.001, system: 'metric' },
+          'μA': { name: '微安', base: 1e-6, system: 'metric' }
+        }
+      }
+    };
+
+    // 历史记录
+    let conversionHistory = [];
+
+    // DOM 元素
+    const categoryTabs = document.getElementById('category-tabs');
+    const converterContent = document.getElementById('converter-content');
+    const historyList = document.getElementById('history-list');
+    const clearHistoryBtn = document.getElementById('clear-history');
+
+    // 初始化页面
+    function initPage() {
+      // 创建单位类别标签页
+      createCategoryTabs();
+      
+      // 加载历史记录
+      loadHistory();
+      
+      // 绑定事件
+      clearHistoryBtn.addEventListener('click', clearHistory);
+    }
+
+    // 创建单位类别标签页
+    function createCategoryTabs() {
+      categoryTabs.innerHTML = '';
+      
+      Object.keys(unitData).forEach((categoryKey, index) => {
+        const category = unitData[categoryKey];
+        const tab = document.createElement('button');
+        tab.className = `px-3 py-2 text-sm font-medium rounded-t-lg transition-colors ${index === 0 ? 'tab-active' : 'tab-inactive'}`;
+        tab.textContent = category.name;
+        tab.dataset.category = categoryKey;
+        
+        tab.addEventListener('click', () => {
+          // 更新标签页样式
+          document.querySelectorAll('#category-tabs button').forEach(t => {
+            t.classList.remove('tab-active');
+            t.classList.add('tab-inactive');
+          });
+          tab.classList.remove('tab-inactive');
+          tab.classList.add('tab-active');
+          
+          // 显示对应单位类别的换算器
+          showConverter(categoryKey);
+        });
+        
+        categoryTabs.appendChild(tab);
+      });
+      
+      // 默认显示第一个单位类别的换算器
+      if (Object.keys(unitData).length > 0) {
+        showConverter(Object.keys(unitData)[0]);
+      }
+    }
+
+    // 显示单位换算器
+    function showConverter(categoryKey) {
+      const category = unitData[categoryKey];
+      
+      // 创建换算器HTML
+      let html = `
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <!-- 输入部分 -->
+          <div class="bg-blue-50 rounded-xl p-6">
+            <div class="mb-4">
+              <label for="input-value" class="block text-sm font-medium text-gray-700 mb-1">输入值</label>
+              <input type="number" id="input-value" class="input-field" placeholder="请输入数值" step="any">
+            </div>
+            <div class="mb-4">
+              <label for="from-unit" class="block text-sm font-medium text-gray-700 mb-1">从</label>
+              <div class="relative">
+                <select id="from-unit" class="select-field pr-8">
+                  <option value="">请选择单位</option>
+                  ${createUnitOptions(category.units)}
+                </select>
+                <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
+                  <i class="fa fa-chevron-down text-xs"></i>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- 输出部分 -->
+          <div class="bg-indigo-50 rounded-xl p-6">
+            <div class="mb-4">
+              <label for="output-value" class="block text-sm font-medium text-gray-700 mb-1">结果</label>
+              <input type="number" id="output-value" class="input-field" readonly step="any">
+            </div>
+            <div class="mb-4">
+              <label for="to-unit" class="block text-sm font-medium text-gray-700 mb-1">到</label>
+              <div class="relative">
+                <select id="to-unit" class="select-field pr-8">
+                  <option value="">请选择单位</option>
+                  ${createUnitOptions(category.units)}
+                </select>
+                <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
+                  <i class="fa fa-chevron-down text-xs"></i>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 操作按钮 -->
+        <div class="flex flex-wrap justify-center gap-4 mt-6">
+          <button id="swap-btn" class="btn-secondary">
+            <i class="fa fa-refresh mr-2"></i>交换单位
+          </button>
+          <button id="copy-btn" class="btn-secondary">
+            <i class="fa fa-copy mr-2"></i>复制结果
+          </button>
+        </div>
+        
+        <!-- 换算公式 -->
+        <div class="mt-6 p-4 bg-gray-50 rounded-lg">
+          <h3 class="text-sm font-medium text-gray-700 mb-2">换算公式</h3>
+          <p id="formula" class="text-sm text-gray-600">请输入数值并选择单位进行换算</p>
+        </div>
+      `;
+      
+      converterContent.innerHTML = html;
+      
+      // 获取元素
+      const inputValue = document.getElementById('input-value');
+      const fromUnit = document.getElementById('from-unit');
+      const toUnit = document.getElementById('to-unit');
+      
+      // 绑定事件
+      inputValue.addEventListener('input', () => debounce(() => convertUnit(categoryKey), 300));
+      fromUnit.addEventListener('change', () => convertUnit(categoryKey));
+      toUnit.addEventListener('change', () => convertUnit(categoryKey));
+      document.getElementById('swap-btn').addEventListener('click', swapUnits);
+      document.getElementById('copy-btn').addEventListener('click', copyResult);
+    }
+
+    // 创建单位选项
+    function createUnitOptions(units) {
+      let options = '';
+      
+      // 按单位系统分组
+      const systems = {
+        metric: { name: '公制', units: [] },
+        imperial: { name: '英制', units: [] },
+        chinese: { name: '市制', units: [] }
+      };
+      
+      Object.keys(units).forEach(unitKey => {
+        const unit = units[unitKey];
+        if (systems[unit.system]) {
+          systems[unit.system].units.push({ key: unitKey, ...unit });
+        } else {
+          // 如果单位系统不在预定义列表中，添加到公制
+          systems.metric.units.push({ key: unitKey, ...unit });
+        }
+      });
+      
+      // 生成选项HTML
+      Object.keys(systems).forEach(systemKey => {
+        const system = systems[systemKey];
+        if (system.units.length > 0) {
+          options += `<optgroup label="${system.name}">`;
+          system.units.forEach(unit => {
+            options += `<option value="${unit.key}">${unit.name} (${unit.key})</option>`;
+          });
+          options += '</optgroup>';
+        }
+      });
+      
+      return options;
+    }
+
+    // 单位换算
+    function convertUnit(categoryKey) {
+      const inputValue = document.getElementById('input-value').value;
+      const fromUnit = document.getElementById('from-unit').value;
+      const toUnit = document.getElementById('to-unit').value;
+      const outputValue = document.getElementById('output-value');
+      const formula = document.getElementById('formula');
+      
+      // 验证输入
+      if (!inputValue || !fromUnit || !toUnit) {
+        outputValue.value = '';
+        formula.textContent = '请输入数值并选择单位进行换算';
+        return;
+      }
+      
+      const value = parseFloat(inputValue);
+      const category = unitData[categoryKey];
+      const fromUnitData = category.units[fromUnit];
+      const toUnitData = category.units[toUnit];
+      
+      let result;
+      let formulaText;
+      
+      // 特殊处理温度单位
+      if (categoryKey === 'temperature') {
+        // 转换为开尔文（基础单位）
+        const kelvin = fromUnitData.toBase(value);
+        // 从开尔文转换为目标单位
+        result = toUnitData.fromBase(kelvin);
+        
+        formulaText = `${value} ${fromUnitData.name} = ${result.toFixed(6)} ${toUnitData.name}`;
+      } else {
+        // 其他单位的换算
+        // 转换为基础单位
+        const baseValue = value * fromUnitData.base;
+        // 从基础单位转换为目标单位
+        result = baseValue / toUnitData.base;
+        
+        formulaText = `${value} ${fromUnitData.name} = ${value} × ${fromUnitData.base} ÷ ${toUnitData.base} = ${result.toFixed(6)} ${toUnitData.name}`;
+      }
+      
+      // 显示结果
+      outputValue.value = result;
+      formula.textContent = formulaText;
+      
+      // 添加到历史记录
+      addToHistory({
+        category: category.name,
+        inputValue: value,
+        fromUnit: fromUnitData.name,
+        fromUnitSymbol: fromUnit,
+        outputValue: result,
+        toUnit: toUnitData.name,
+        toUnitSymbol: toUnit,
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    // 交换单位
+    function swapUnits() {
+      const fromUnit = document.getElementById('from-unit');
+      const toUnit = document.getElementById('to-unit');
+      const inputValue = document.getElementById('input-value');
+      const outputValue = document.getElementById('output-value');
+      
+      // 保存当前值
+      const tempUnit = fromUnit.value;
+      const tempValue = inputValue.value;
+      
+      // 交换单位和值
+      fromUnit.value = toUnit.value;
+      toUnit.value = tempUnit;
+      inputValue.value = outputValue.value;
+      outputValue.value = tempValue;
+    }
+
+    // 复制结果
+    function copyResult() {
+      const outputValue = document.getElementById('output-value');
+      
+      // 选择结果文本
+      outputValue.select();
+      outputValue.setSelectionRange(0, 99999); // 兼容移动设备
+      
+      // 复制到剪贴板
+      document.execCommand('copy');
+      
+      // 显示提示
+      alert('结果已复制到剪贴板');
+    }
+
+    // 添加到历史记录
+    function addToHistory(item) {
+      // 添加到历史记录数组
+      conversionHistory.unshift(item);
+      
+      // 限制历史记录数量
+      if (conversionHistory.length > 10) {
+        conversionHistory.pop();
+      }
+      
+      // 保存到本地存储
+      localStorage.setItem('conversionHistory', JSON.stringify(conversionHistory));
+      
+      // 更新历史记录显示
+      updateHistoryList();
+    }
+
+    // 加载历史记录
+    function loadHistory() {
+      const savedHistory = localStorage.getItem('conversionHistory');
+      if (savedHistory) {
+        conversionHistory = JSON.parse(savedHistory);
+        updateHistoryList();
+      }
+    }
+
+    // 更新历史记录显示
+    function updateHistoryList() {
+      if (conversionHistory.length === 0) {
+        historyList.innerHTML = `
+          <div class="text-center py-4 text-gray-400 text-sm">
+            暂无换算历史记录
+          </div>
+        `;
+        return;
+      }
+      
+      let html = '';
+      conversionHistory.forEach((item, index) => {
+        const date = new Date(item.timestamp);
+        const timeString = `${date.getFullYear()}-${padZero(date.getMonth() + 1)}-${padZero(date.getDate())} ${padZero(date.getHours())}:${padZero(date.getMinutes())}`;
+        
+        html += `
+          <div class="flex items-center justify-between py-2 border-b border-gray-100 last:border-0 hover:bg-gray-50 px-2 rounded transition-colors">
+            <div class="flex-1">
+              <p class="text-sm font-medium">${item.inputValue} ${item.fromUnit} = ${item.outputValue.toFixed(6)} ${item.toUnit}</p>
+              <p class="text-xs text-gray-500">${item.category} · ${timeString}</p>
+            </div>
+            <div class="flex space-x-2">
+              <button class="text-gray-400 hover:text-primary transition-colors" onclick="useHistoryItem(${index})" title="使用此记录">
+                <i class="fa fa-refresh"></i>
+              </button>
+              <button class="text-gray-400 hover:text-red-500 transition-colors" onclick="deleteHistoryItem(${index})" title="删除此记录">
+                <i class="fa fa-trash-o"></i>
+              </button>
+            </div>
+          </div>
+        `;
+      });
+      
+      historyList.innerHTML = html;
+    }
+
+    // 使用历史记录项
+    function useHistoryItem(index) {
+      const item = conversionHistory[index];
+      
+      // 找到对应的单位类别
+      let categoryKey = '';
+      Object.keys(unitData).forEach(key => {
+        if (unitData[key].name === item.category) {
+          categoryKey = key;
+        }
+      });
+      
+      if (!categoryKey) return;
+      
+      // 切换到对应的标签页
+      document.querySelectorAll('#category-tabs button').forEach(tab => {
+        if (tab.dataset.category === categoryKey) {
+          tab.click();
+        }
+      });
+      
+      // 填充值和单位
+      setTimeout(() => {
+        document.getElementById('input-value').value = item.inputValue;
+        
+        // 设置单位
+        const fromUnitSelect = document.getElementById('from-unit');
+        const toUnitSelect = document.getElementById('to-unit');
+        
+        for (let i = 0; i < fromUnitSelect.options.length; i++) {
+          if (fromUnitSelect.options[i].value === item.fromUnitSymbol) {
+            fromUnitSelect.selectedIndex = i;
+            break;
+          }
+        }
+        
+        for (let i = 0; i < toUnitSelect.options.length; i++) {
+          if (toUnitSelect.options[i].value === item.toUnitSymbol) {
+            toUnitSelect.selectedIndex = i;
+            break;
+          }
+        }
+        
+        // 执行换算
+        convertUnit(categoryKey);
+      }, 100);
+    }
+
+    // 清空历史记录
+    function clearHistory() {
+      if (confirm('确定要清空所有换算历史记录吗？')) {
+        conversionHistory = [];
+        localStorage.removeItem('conversionHistory');
+        updateHistoryList();
+      }
+    }
+    
+    // 删除单个历史记录项
+    function deleteHistoryItem(index) {
+      if (confirm('确定要删除这条历史记录吗？')) {
+        conversionHistory.splice(index, 1);
+        localStorage.setItem('conversionHistory', JSON.stringify(conversionHistory));
+        updateHistoryList();
+      }
+    }
+
+    // 防抖函数
+    function debounce(func, wait) {
+      let timeout;
+      return function() {
+        const context = this;
+        const args = arguments;
+        clearTimeout(timeout);
+        timeout = setTimeout(() => func.apply(context, args), wait);
+      };
+    }
+    
+    // 辅助函数：数字补零
+    function padZero(num) {
+      return num < 10 ? `0${num}` : num;
+    }
+
+    // 页面加载完成后初始化
+    document.addEventListener('DOMContentLoaded', initPage);
+  </script>
+</body>
+</html>
