@@ -1,0 +1,319 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body {
+            background: #f0f9ff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            font-family: 'Comic Sans MS', cursive;
+        }
+        .controls {
+            margin: 20px;
+            display: flex;
+            gap: 15px;
+        }
+        button {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 25px;
+            background: #ff9a8d;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 16px;
+        }
+        button:hover {
+            transform: scale(1.1);
+            background: #ff7b6b;
+        }
+        #canvas {
+            border: 4px solid #a8d8ff;
+            border-radius: 15px;
+            box-shadow: 0 0 20px rgba(168,216,255,0.5);
+        }
+        .info {
+            margin-top: 20px;
+            padding: 15px;
+            background: #fff3e6;
+            border-radius: 10px;
+            min-width: 250px;
+        }
+        .dot {
+            width: 20px;
+            height: 20px;
+            background: #ff6b6b;
+            border-radius: 50%;
+            position: absolute;
+            cursor: move;
+            border: 3px solid white;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+    </style>
+</head>
+<body>
+    <div class="controls">
+        <button onclick="initTriangle('right')">直角三角形</button>
+        <button onclick="initTriangle('obtuse')">钝角三角形</button>
+        <button onclick="initTriangle('acute')">锐角三角形</button>
+    </div>
+    <canvas id="canvas" width="500" height="400"></canvas>
+    <div class="info" id="angleInfo"></div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        let points = [{x: 100, y: 300}, {x: 400, y: 300}, {x: 300, y: 100}];
+        let dragPoint = -1;
+
+        function calcAngles(p1, p2, p3) {
+            const a = Math.hypot(p2.x - p3.x, p2.y - p3.y);
+            const b = Math.hypot(p1.x - p3.x, p1.y - p3.y);
+            const c = Math.hypot(p1.x - p2.x, p1.y - p2.y);
+            
+            const angleA = Math.acos((b*b + c*c - a*a)/(2*b*c)) * 180/Math.PI;
+            const angleB = Math.acos((a*a + c*c - b*b)/(2*a*c)) * 180/Math.PI;
+            const angleC = 180 - angleA - angleB;
+            
+            return [angleA, angleB, angleC];
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // 绘制三角形
+            ctx.beginPath();
+            ctx.moveTo(points[0].x, points[0].y);
+            ctx.lineTo(points[1].x, points[1].y);
+            ctx.lineTo(points[2].x, points[2].y);
+            ctx.closePath();
+            ctx.strokeStyle = '#ff9a8d';
+            ctx.lineWidth = 4;
+            ctx.stroke();
+            ctx.fillStyle = '#ffe66d55';
+            ctx.fill();
+
+            // 绘制顶点
+            points.forEach(p => {
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, 10, 0, Math.PI*2);
+                ctx.fillStyle = '#ff6b6b';
+                ctx.fill();
+            });
+
+            updateAngleInfo();
+        }
+
+        function updateAngleInfo() {
+            const [a, b, c] = calcAngles(...points);
+            const type = [a, b, c].some(ang => Math.abs(ang - 90) < 1) ? '直角' :
+                        [a, b, c].some(ang => ang > 90) ? '钝角' : '锐角';
+            
+            document.getElementById('angleInfo').innerHTML = `
+                <div>∠A: ${a.toFixed(1)}°</div>
+                <div>∠B: ${b.toFixed(1)}°</div>
+                <div>∠C: ${c.toFixed(1)}°</div>
+                <div style="color: #4b86b4; margin-top: 10px;">内角和：${(a + b + c).toFixed(1)}°</div>
+                <div style="color: #6c5ce7; font-weight: bold; margin-top: 8px;">当前是${type}三角形</div>
+            `;
+        }
+
+        function initTriangle(type) {
+            switch(type) {
+                case 'right':
+                    points = [{x: 100, y: 300}, {x: 400, y: 300}, {x: 400, y: 200}];
+                    break;
+                case 'obtuse':
+                    points = [{x: 100, y: 300}, {x: 400, y: 300}, {x: 450, y: 150}];
+                    break;
+                case 'acute':
+                    points = [{x: 150, y: 300}, {x: 350, y: 300}, {x: 250, y: 150}];
+                    break;
+            }
+            draw();
+        }
+
+        canvas.addEventListener('mousedown', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            
+            dragPoint = points.findIndex(p => 
+                Math.abs(p.x - x) < 15 && Math.abs(p.y - y) < 15
+            );
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            if (dragPoint === -1) return;
+            
+            const rect = canvas.getBoundingClientRect();
+            points[dragPoint].x = e.clientX - rect.left;
+            points[dragPoint].y = e.clientY - rect.top;
+            
+            draw();
+        });
+
+        canvas.addEventListener('mouseup', () => dragPoint = -1);
+        canvas.addEventListener('mouseleave', () => dragPoint = -1);
+
+        initTriangle('right');
+    </script>
+
+<script>
+// 禁止右键菜单
+document.addEventListener('contextmenu', function(e) {
+    e.preventDefault();
+    return false;
+});
+
+// 禁止选择文本
+document.addEventListener('selectstart', function(e) {
+    e.preventDefault();
+    return false;
+});
+
+// 禁止拖拽
+document.addEventListener('dragstart', function(e) {
+    e.preventDefault();
+    return false;
+});
+
+// 禁止各种快捷键
+document.addEventListener('keydown', function(e) {
+    // 禁止F12开发者工具
+    if (e.keyCode === 123) {
+        e.preventDefault();
+        return false;
+    }
+    
+    // 禁止Ctrl+Shift+I (开发者工具)
+    if (e.ctrlKey && e.shiftKey && e.keyCode === 73) {
+        e.preventDefault();
+        return false;
+    }
+    
+    // 禁止Ctrl+Shift+C (检查元素)
+    if (e.ctrlKey && e.shiftKey && e.keyCode === 67) {
+        e.preventDefault();
+        return false;
+    }
+    
+    // 禁止Ctrl+Shift+J (控制台)
+    if (e.ctrlKey && e.shiftKey && e.keyCode === 74) {
+        e.preventDefault();
+        return false;
+    }
+    
+    // 禁止Ctrl+U (查看源代码)
+    if (e.ctrlKey && e.keyCode === 85) {
+        e.preventDefault();
+        return false;
+    }
+    
+    // 禁止Ctrl+A (全选)
+    if (e.ctrlKey && e.keyCode === 65) {
+        e.preventDefault();
+        return false;
+    }
+    
+    // 禁止Ctrl+C (复制)
+    if (e.ctrlKey && e.keyCode === 67) {
+        e.preventDefault();
+        return false;
+    }
+    
+    // 禁止Ctrl+V (粘贴)
+    if (e.ctrlKey && e.keyCode === 86) {
+        e.preventDefault();
+        return false;
+    }
+    
+    // 禁止Ctrl+X (剪切)
+    if (e.ctrlKey && e.keyCode === 88) {
+        e.preventDefault();
+        return false;
+    }
+    
+    // 禁止Ctrl+S (保存)
+    if (e.ctrlKey && e.keyCode === 83) {
+        e.preventDefault();
+        return false;
+    }
+    
+    // 禁止Ctrl+P (打印)
+    if (e.ctrlKey && e.keyCode === 80) {
+        e.preventDefault();
+        return false;
+    }
+});
+
+// 添加CSS样式禁止选择
+var style = document.createElement('style');
+style.innerHTML = `
+    body {
+        -webkit-user-select: none !important;
+        -moz-user-select: none !important;
+        -ms-user-select: none !important;
+        user-select: none !important;
+        -webkit-touch-callout: none !important;
+        -webkit-tap-highlight-color: transparent !important;
+    }
+    
+    * {
+        -webkit-user-select: none !important;
+        -moz-user-select: none !important;
+        -ms-user-select: none !important;
+        user-select: none !important;
+    }
+    
+    img {
+        -webkit-user-drag: none !important;
+        -khtml-user-drag: none !important;
+        -moz-user-drag: none !important;
+        -o-user-drag: none !important;
+        user-drag: none !important;
+        pointer-events: none !important;
+    }
+`;
+document.head.appendChild(style);
+
+// 禁止打印
+window.addEventListener('beforeprint', function(e) {
+    e.preventDefault();
+    return false;
+});
+
+// 监听粘贴事件
+document.addEventListener('paste', function(e) {
+    e.preventDefault();
+    return false;
+});
+
+// 清空控制台
+console.clear();
+
+// 禁用控制台
+// var originalLog = console.log;
+// console.log = function() {};
+// console.warn = function() {};
+// console.error = function() {};
+// console.info = function() {};
+// console.debug = function() {};
+
+// 反调试
+// (function() {
+//     var originalDevtools = window.console;
+//     Object.defineProperty(window, 'console', {
+//         get: function() {
+//             throw new Error('Console is disabled');
+//         },
+//         set: function() {
+//             throw new Error('Console is disabled');
+//         }
+//     });
+// })();
+</script>
+</body>
+</html>
