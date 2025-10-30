@@ -1,0 +1,415 @@
+<html lang="zh-CN"><head>
+    <meta charset="UTF-8">
+    <title>视频随身尾帧截图器</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f8e9e9; /* 浅粉色背景 */
+            padding: 2rem;
+            margin: 0;
+            position: relative;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            color: #6c5ce7; /* 淡紫色 */
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .upload-section {
+            background-color: #a8e6cf; /* 薄荷绿 */
+            padding: 2rem;
+            border-radius: 15px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 2rem;
+        }
+
+        #video-container {
+            background-color: #ffd3b6; /* 浅橙色 */
+            border-radius: 15px;
+            padding: 1rem;
+            margin: 1rem 0;
+            display: flex;
+            justify-content: center; /* 水平居中 */
+        }
+
+        #video-preview {
+            max-width: 80%; /* 调整视频宽度 */
+            border-radius: 10px;
+        }
+
+        .controls {
+            display: flex;
+            gap: 1rem;
+            margin: 1rem 0;
+            flex-wrap: wrap;
+        }
+
+        button {
+            background-color: #d4a5a5; /* 马卡龙粉 */
+            color: white;
+            border: none;
+            padding: 0.8rem 1.5rem;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 16px;
+        }
+
+        button:hover {
+            background-color: #c89595;
+            transform: translateY(-2px);
+        }
+
+        #screenshots-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-top: 2rem;
+        }
+
+        .screenshot-item {
+            background: white;
+            padding: 0.5rem;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+
+        .screenshot-item img {
+            width: 100%;
+            border-radius: 5px;
+            margin-bottom: 0.5rem;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        .custom-upload {
+            background-color: #6c5ce7;
+            display: inline-block;
+            padding: 0.8rem 1.5rem;
+            border-radius: 25px;
+            cursor: pointer;
+            color: white;
+        }
+
+        /* 移除固定定位 */
+        .explore-button {
+            /* position: fixed;
+            bottom: 20px;
+            right: 20px; */
+        }
+    </style>
+<style>
+    body {
+        -webkit-user-select: none !important;
+        -moz-user-select: none !important;
+        -ms-user-select: none !important;
+        user-select: none !important;
+        -webkit-touch-callout: none !important;
+        -webkit-tap-highlight-color: transparent !important;
+    }
+    
+    * {
+        -webkit-user-select: none !important;
+        -moz-user-select: none !important;
+        -ms-user-select: none !important;
+        user-select: none !important;
+    }
+    
+    img {
+        -webkit-user-drag: none !important;
+        -khtml-user-drag: none !important;
+        -moz-user-drag: none !important;
+        -o-user-drag: none !important;
+        user-drag: none !important;
+        pointer-events: none !important;
+    }
+</style></head>
+<body youdao="bind">
+    <div class="container">
+        <h1>🎥 随身尾帧截图器</h1>
+        
+        <div class="upload-section">
+            <label class="custom-upload">
+                📁 选择视频文件
+                <input type="file" id="video-input" accept="video/*">
+            </label>
+        </div>
+
+        <div id="video-container" style="display: none;">
+            <video id="video-preview" controls=""></video>
+            <div class="controls">
+                <button onclick="capture()">📸 截取当前画面</button>
+                <button onclick="captureLastFrame()">⏭ 截取最后一帧画面</button>
+                <!-- 新增按钮移动到这里 -->
+                <button class="explore-button" onclick="window.location.href='https://chengzijiaoyujishu.com/'">去基地探索更多DeepSeek用法</button>
+            </div>
+        </div>
+
+        <div id="screenshots-container"></div>
+        <!-- 新增一键下载所有截图的按钮 -->
+        <button id="download-all-btn" onclick="downloadAllScreenshots()">⤵ 下载所有截图</button>
+    </div>
+
+    <script>
+        const videoInput = document.getElementById('video-input');
+        const video = document.getElementById('video-preview');
+        const container = document.getElementById('video-container');
+
+        videoInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            const url = URL.createObjectURL(file);
+            video.src = url;
+            container.style.display = 'block';
+        });
+
+        function capture() {
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            canvas.getContext('2d').drawImage(video, 0, 0);
+            
+            addScreenshot(canvas.toDataURL());
+        }
+
+        function captureLastFrame() {
+            const originalTime = video.currentTime;
+            // 等待视频元数据加载完成
+            if (video.readyState < 2) {
+                video.addEventListener('loadedmetadata', function() {
+                    // 跳转到视频的最后时刻
+                    video.currentTime = video.duration;
+                    // 等待视频seek完成后再截图
+                    video.addEventListener('seeked', function() {
+                        const canvas = document.createElement('canvas');
+                        canvas.width = video.videoWidth;
+                        canvas.height = video.videoHeight;
+                        canvas.getContext('2d').drawImage(video, 0, 0);
+                        addScreenshot(canvas.toDataURL());
+                        // 恢复原来的播放时间
+                        video.currentTime = originalTime;
+                        // 移除seeked事件监听器
+                        video.removeEventListener('seeked', arguments.callee);
+                    });
+                }, { once: true });
+            } else {
+                // 视频元数据已经加载完成，直接跳转到最后时刻
+                video.currentTime = video.duration;
+                // 等待视频seek完成后再截图
+                video.addEventListener('seeked', function() {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+                    canvas.getContext('2d').drawImage(video, 0, 0);
+                    addScreenshot(canvas.toDataURL());
+                    // 恢复原来的播放时间
+                    video.currentTime = originalTime;
+                    // 移除seeked事件监听器
+                    video.removeEventListener('seeked', arguments.callee);
+                });
+            }
+        }
+
+        function addScreenshot(dataUrl) {
+            const container = document.getElementById('screenshots-container');
+            
+            const item = document.createElement('div');
+            item.className = 'screenshot-item';
+            
+            const img = new Image();
+            img.src = dataUrl;
+            
+            const downloadBtn = document.createElement('button');
+            downloadBtn.innerHTML = '⤵ 下载';
+            downloadBtn.onclick = () => {
+                const link = document.createElement('a');
+                link.download = `screenshot-${Date.now()}.png`;
+                link.href = dataUrl;
+                link.click();
+            };
+
+            item.appendChild(img);
+            item.appendChild(downloadBtn);
+            container.appendChild(item);
+        }
+
+        // 新增函数：下载所有截图
+        function downloadAllScreenshots() {
+            const container = document.getElementById('screenshots-container');
+            const screenshotItems = container.querySelectorAll('.screenshot-item');
+
+            screenshotItems.forEach((item, index) => {
+                const img = item.querySelector('img');
+                const link = document.createElement('a');
+                link.download = `screenshot-${index + 1}.png`;
+                link.href = img.src;
+                link.click();
+            });
+        }
+    </script>
+
+<script>
+// 禁止右键菜单
+document.addEventListener('contextmenu', function(e) {
+    e.preventDefault();
+    return false;
+});
+
+// 禁止选择文本
+document.addEventListener('selectstart', function(e) {
+    e.preventDefault();
+    return false;
+});
+
+// 禁止拖拽
+document.addEventListener('dragstart', function(e) {
+    e.preventDefault();
+    return false;
+});
+
+// 禁止各种快捷键
+document.addEventListener('keydown', function(e) {
+    // 禁止F12开发者工具
+    if (e.keyCode === 123) {
+        e.preventDefault();
+        return false;
+    }
+    
+    // 禁止Ctrl+Shift+I (开发者工具)
+    if (e.ctrlKey && e.shiftKey && e.keyCode === 73) {
+        e.preventDefault();
+        return false;
+    }
+    
+    // 禁止Ctrl+Shift+C (检查元素)
+    if (e.ctrlKey && e.shiftKey && e.keyCode === 67) {
+        e.preventDefault();
+        return false;
+    }
+    
+    // 禁止Ctrl+Shift+J (控制台)
+    if (e.ctrlKey && e.shiftKey && e.keyCode === 74) {
+        e.preventDefault();
+        return false;
+    }
+    
+    // 禁止Ctrl+U (查看源代码)
+    if (e.ctrlKey && e.keyCode === 85) {
+        e.preventDefault();
+        return false;
+    }
+    
+    // 禁止Ctrl+A (全选)
+    if (e.ctrlKey && e.keyCode === 65) {
+        e.preventDefault();
+        return false;
+    }
+    
+    // 禁止Ctrl+C (复制)
+    if (e.ctrlKey && e.keyCode === 67) {
+        e.preventDefault();
+        return false;
+    }
+    
+    // 禁止Ctrl+V (粘贴)
+    if (e.ctrlKey && e.keyCode === 86) {
+        e.preventDefault();
+        return false;
+    }
+    
+    // 禁止Ctrl+X (剪切)
+    if (e.ctrlKey && e.keyCode === 88) {
+        e.preventDefault();
+        return false;
+    }
+    
+    // 禁止Ctrl+S (保存)
+    if (e.ctrlKey && e.keyCode === 83) {
+        e.preventDefault();
+        return false;
+    }
+    
+    // 禁止Ctrl+P (打印)
+    if (e.ctrlKey && e.keyCode === 80) {
+        e.preventDefault();
+        return false;
+    }
+});
+
+// 添加CSS样式禁止选择
+var style = document.createElement('style');
+style.innerHTML = `
+    body {
+        -webkit-user-select: none !important;
+        -moz-user-select: none !important;
+        -ms-user-select: none !important;
+        user-select: none !important;
+        -webkit-touch-callout: none !important;
+        -webkit-tap-highlight-color: transparent !important;
+    }
+    
+    * {
+        -webkit-user-select: none !important;
+        -moz-user-select: none !important;
+        -ms-user-select: none !important;
+        user-select: none !important;
+    }
+    
+    img {
+        -webkit-user-drag: none !important;
+        -khtml-user-drag: none !important;
+        -moz-user-drag: none !important;
+        -o-user-drag: none !important;
+        user-drag: none !important;
+        pointer-events: none !important;
+    }
+`;
+document.head.appendChild(style);
+
+// 禁止打印
+window.addEventListener('beforeprint', function(e) {
+    e.preventDefault();
+    return false;
+});
+
+// 监听粘贴事件
+document.addEventListener('paste', function(e) {
+    e.preventDefault();
+    return false;
+});
+
+// 清空控制台
+console.clear();
+
+// 禁用控制台
+// var originalLog = console.log;
+// console.log = function() {};
+// console.warn = function() {};
+// console.error = function() {};
+// console.info = function() {};
+// console.debug = function() {};
+
+// 反调试
+// (function() {
+//     var originalDevtools = window.console;
+//     Object.defineProperty(window, 'console', {
+//         get: function() {
+//             throw new Error('Console is disabled');
+//         },
+//         set: function() {
+//             throw new Error('Console is disabled');
+//         }
+//     });
+// })();
+</script>
+
+</body>
+</html>
