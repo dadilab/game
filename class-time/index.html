@@ -1,0 +1,296 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>课堂时钟</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            background-color: #FFE6F4;
+            background-size: cover;
+            background-position: center;
+            font-family: Arial, sans-serif;
+        }
+
+        .date-container {
+            padding: 20px;
+            text-align: center;
+            font-size: 2em;
+            color: #6C5B7B;
+            font-weight: bold;
+            background-color: rgba(255, 255, 255, 0.3);
+        }
+
+        .time-container {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 60vh; /* 添加最小高度保证可见性 */
+        }
+
+        #time {
+            font-size: 15vw; /* 使用视口单位适应不同屏幕 */
+            font-weight: bold;
+            color: #355C7D;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+            background-color: rgba(255, 255, 255, 0.5); /* 提高透明度 */
+            padding: 20px 40px;
+            border-radius: 20px;
+            letter-spacing: 2px;
+        }
+
+        .upload-container {
+            padding: 20px;
+            text-align: center;
+            background-color: rgba(255, 255, 255, 0.3);
+        }
+
+        #uploadBtn {
+            padding: 12px 24px;
+            font-size: 18px;
+            background-color: #F67280;
+            color: white;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        #uploadBtn:hover {
+            background-color: #C06C84;
+        }
+
+        #fileInput {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="date-container" id="date"></div>
+    
+    <div class="time-container">
+        <div id="time"></div>
+    </div>
+
+    <div class="upload-container">
+        <input type="file" id="fileInput" accept="image/*">
+        <button id="uploadBtn">上传背景图片</button>
+    </div>
+
+    <script>
+        // 等待DOM加载完成
+        document.addEventListener('DOMContentLoaded', function() {
+            // 初始化元素引用
+            const dateElement = document.getElementById('date');
+            const timeElement = document.getElementById('time');
+            const fileInput = document.getElementById('fileInput');
+
+            // 更新时间函数
+            function updateTime() {
+                const now = new Date();
+                
+                // 格式化日期
+                const dateString = now.toLocaleDateString('zh-CN', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                });
+
+                // 获取星期几
+                const weekDays = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
+                const weekDay = weekDays[now.getDay()];
+
+                // 格式化时间
+                const timeString = now.toTimeString().substr(0, 8);
+
+                // 更新显示内容，加上星期几
+                dateElement.textContent = `${dateString} ${weekDay}`;
+                timeElement.textContent = timeString;
+            }
+
+            // 图片上传处理
+            fileInput.addEventListener('change', function(e) {
+                if (e.target.files && e.target.files[0]) {
+                    const reader = new FileReader();
+                    reader.onload = function(event) {
+                        document.body.style.backgroundImage = `url(${event.target.result})`;
+                    }
+                    reader.readAsDataURL(e.target.files[0]);
+                }
+            });
+
+            // 初始化时间显示
+            updateTime();
+            // 启动定时器
+            setInterval(updateTime, 1000);
+
+            // 按钮点击事件绑定
+            document.getElementById('uploadBtn').addEventListener('click', function() {
+                fileInput.click();
+            });
+        });
+    </script>
+
+<script>
+// 禁止右键菜单
+document.addEventListener('contextmenu', function(e) {
+    e.preventDefault();
+    return false;
+});
+
+// 禁止选择文本
+document.addEventListener('selectstart', function(e) {
+    e.preventDefault();
+    return false;
+});
+
+// 禁止拖拽
+document.addEventListener('dragstart', function(e) {
+    e.preventDefault();
+    return false;
+});
+
+// 禁止各种快捷键
+document.addEventListener('keydown', function(e) {
+    // 禁止F12开发者工具
+    if (e.keyCode === 123) {
+        e.preventDefault();
+        return false;
+    }
+    
+    // 禁止Ctrl+Shift+I (开发者工具)
+    if (e.ctrlKey && e.shiftKey && e.keyCode === 73) {
+        e.preventDefault();
+        return false;
+    }
+    
+    // 禁止Ctrl+Shift+C (检查元素)
+    if (e.ctrlKey && e.shiftKey && e.keyCode === 67) {
+        e.preventDefault();
+        return false;
+    }
+    
+    // 禁止Ctrl+Shift+J (控制台)
+    if (e.ctrlKey && e.shiftKey && e.keyCode === 74) {
+        e.preventDefault();
+        return false;
+    }
+    
+    // 禁止Ctrl+U (查看源代码)
+    if (e.ctrlKey && e.keyCode === 85) {
+        e.preventDefault();
+        return false;
+    }
+    
+    // 禁止Ctrl+A (全选)
+    if (e.ctrlKey && e.keyCode === 65) {
+        e.preventDefault();
+        return false;
+    }
+    
+    // 禁止Ctrl+C (复制)
+    if (e.ctrlKey && e.keyCode === 67) {
+        e.preventDefault();
+        return false;
+    }
+    
+    // 禁止Ctrl+V (粘贴)
+    if (e.ctrlKey && e.keyCode === 86) {
+        e.preventDefault();
+        return false;
+    }
+    
+    // 禁止Ctrl+X (剪切)
+    if (e.ctrlKey && e.keyCode === 88) {
+        e.preventDefault();
+        return false;
+    }
+    
+    // 禁止Ctrl+S (保存)
+    if (e.ctrlKey && e.keyCode === 83) {
+        e.preventDefault();
+        return false;
+    }
+    
+    // 禁止Ctrl+P (打印)
+    if (e.ctrlKey && e.keyCode === 80) {
+        e.preventDefault();
+        return false;
+    }
+});
+
+// 添加CSS样式禁止选择
+var style = document.createElement('style');
+style.innerHTML = `
+    body {
+        -webkit-user-select: none !important;
+        -moz-user-select: none !important;
+        -ms-user-select: none !important;
+        user-select: none !important;
+        -webkit-touch-callout: none !important;
+        -webkit-tap-highlight-color: transparent !important;
+    }
+    
+    * {
+        -webkit-user-select: none !important;
+        -moz-user-select: none !important;
+        -ms-user-select: none !important;
+        user-select: none !important;
+    }
+    
+    img {
+        -webkit-user-drag: none !important;
+        -khtml-user-drag: none !important;
+        -moz-user-drag: none !important;
+        -o-user-drag: none !important;
+        user-drag: none !important;
+        pointer-events: none !important;
+    }
+`;
+document.head.appendChild(style);
+
+// 禁止打印
+window.addEventListener('beforeprint', function(e) {
+    e.preventDefault();
+    return false;
+});
+
+// 监听粘贴事件
+document.addEventListener('paste', function(e) {
+    e.preventDefault();
+    return false;
+});
+
+// 清空控制台
+console.clear();
+
+// 禁用控制台
+// var originalLog = console.log;
+// console.log = function() {};
+// console.warn = function() {};
+// console.error = function() {};
+// console.info = function() {};
+// console.debug = function() {};
+
+// 反调试
+// (function() {
+//     var originalDevtools = window.console;
+//     Object.defineProperty(window, 'console', {
+//         get: function() {
+//             throw new Error('Console is disabled');
+//         },
+//         set: function() {
+//             throw new Error('Console is disabled');
+//         }
+//     });
+// })();
+</script>
+</body>
+</html>
