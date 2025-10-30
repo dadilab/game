@@ -1,0 +1,388 @@
+<html lang="zh-CN"><head>
+    <meta charset="UTF-8">
+    <title>圆形切割器</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: #f0f9ff;
+            font-family: 'Comic Sans MS', cursive;
+        }
+        .title {
+            text-align: center;
+            color: #ff6b6b;
+            font-size: 2.5em;
+            margin: 20px 0;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        }
+        .container {
+            display: flex;
+            height: 85vh;
+        }
+        .left-panel {
+            width: 20%;
+            padding: 20px;
+            background: #fff9e6;
+            border-radius: 20px;
+            box-shadow: 0 0 15px rgba(0,0,0,0.1);
+        }
+        .right-panel {
+            width: 80%;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .btn {
+            display: block;
+            width: 100%;
+            padding: 15px;
+            margin: 10px 0;
+            border: none;
+            border-radius: 30px;
+            background: linear-gradient(45deg, #ff9a9e, #fad0c4);
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+            transition: 0.3s;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 8px rgba(0,0,0,0.2);
+        }
+        #preview {
+            max-width: 80%;
+            max-height: 60vh;
+            border-radius: 15px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.2);
+        }
+        .download-btn {
+            background: linear-gradient(45deg, #89f7fe, #66a6ff);
+        }
+        .result-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 20px;
+            justify-content: center;
+        }
+        .download-all {
+            background: linear-gradient(45deg, #6c5ce7, #a66efa);
+            margin-top: 20px;
+        }
+    </style>
+<style>
+    body {
+        -webkit-user-select: none !important;
+        -moz-user-select: none !important;
+        -ms-user-select: none !important;
+        user-select: none !important;
+        -webkit-touch-callout: none !important;
+        -webkit-tap-highlight-color: transparent !important;
+    }
+    
+    * {
+        -webkit-user-select: none !important;
+        -moz-user-select: none !important;
+        -ms-user-select: none !important;
+        user-select: none !important;
+    }
+    
+    img {
+        -webkit-user-drag: none !important;
+        -khtml-user-drag: none !important;
+        -moz-user-drag: none !important;
+        -o-user-drag: none !important;
+        user-drag: none !important;
+        pointer-events: none !important;
+    }
+</style></head>
+<body youdao="bind">
+    <h1 class="title">
+        <i class="fas fa-star"></i>
+       圆形切割器
+        <i class="fas fa-star"></i>
+    </h1>
+    
+    <div class="container">
+        <div class="left-panel">
+            <button class="btn" onclick="document.getElementById('fileInput').click()">
+                <i class="fas fa-upload"></i> 上传图片
+            </button>
+            <button class="btn" onclick="splitImage(2)">一分为二</button>
+            <button class="btn" onclick="splitImage(3)">一分为三</button>
+            <button class="btn" onclick="splitImage(4)">一分为四</button>
+            <button class="btn" onclick="splitImage(8)">一分为八</button>
+            <button class="btn" onclick="splitImage(prompt('请输入要分割的份数：'))">一分为多</button>
+            <input type="file" id="fileInput" hidden="" accept="image/*">
+        </div>
+        <div class="right-panel">
+            <img id="preview">
+            <div class="result-container" id="results"></div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.7.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.0/FileSaver.min.js"></script>
+    <script>
+        let originalImage = null;
+        let currentSlices = 0;
+        
+        document.getElementById('fileInput').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    originalImage = new Image();
+                    originalImage.src = e.target.result;
+                    originalImage.onload = () => {
+                        document.getElementById('preview').src = e.target.result;
+                        document.getElementById('results').innerHTML = '';
+                    }
+                }
+                reader.readAsDataURL(file);
+            }
+        });
+
+        async function splitImage(slices) {
+            if (!originalImage) return alert('请先上传图片！');
+            if (isNaN(slices) || slices < 2) return alert('请输入有效的分割份数！');
+            
+            const container = document.getElementById('results');
+            container.innerHTML = '';
+            currentSlices = slices;
+            
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            const size = Math.min(originalImage.width, originalImage.height);
+            canvas.width = size;
+            canvas.height = size;
+
+            // 绘制圆形图片
+            ctx.beginPath();
+            ctx.arc(size/2, size/2, size/2, 0, Math.PI*2);
+            ctx.closePath();
+            ctx.clip();
+            ctx.drawImage(originalImage, 0, 0, size, size);
+
+            // 分割处理
+            const angleStep = 360 / slices;
+            const zip = new JSZip();
+            
+            for(let i = 0; i < slices; i++) {
+                const sliceCanvas = document.createElement('canvas');
+                const sliceCtx = sliceCanvas.getContext('2d');
+                sliceCanvas.width = size;
+                sliceCanvas.height = size;
+                
+                // 绘制扇形区域
+                sliceCtx.beginPath();
+                sliceCtx.moveTo(size/2, size/2);
+                sliceCtx.arc(size/2, size/2, size/2, 
+                    i * angleStep * Math.PI/180, 
+                    (i+1) * angleStep * Math.PI/180
+                );
+                sliceCtx.closePath();
+                sliceCtx.clip();
+                sliceCtx.drawImage(canvas, 0, 0);
+
+                // 添加到压缩包
+                const blob = await new Promise(resolve => 
+                    sliceCanvas.toBlob(resolve, 'image/png')
+                );
+                zip.file(`slice_${i+1}.png`, blob);
+
+                // 创建下载按钮
+                const wrapper = document.createElement('div');
+                const downloadBtn = document.createElement('button');
+                downloadBtn.className = 'btn download-btn';
+                downloadBtn.innerHTML = `<i class="fas fa-download"></i> 第${i+1}块`;
+                downloadBtn.onclick = () => {
+                    const link = document.createElement('a');
+                    link.download = `slice_${i+1}.png`;
+                    link.href = sliceCanvas.toDataURL();
+                    link.click();
+                };
+
+                // 显示预览
+                const preview = document.createElement('img');
+                preview.src = sliceCanvas.toDataURL();
+                preview.style.width = '100px';
+                preview.style.height = '100px';
+                preview.style.borderRadius = '50%';
+                
+                wrapper.appendChild(preview);
+                wrapper.appendChild(downloadBtn);
+                container.appendChild(wrapper);
+            }
+
+            // 添加一键下载按钮
+            const downloadAllBtn = document.createElement('button');
+            downloadAllBtn.className = 'btn download-all';
+            downloadAllBtn.innerHTML = '<i class="fas fa-file-archive"></i> 一键下载全部';
+            downloadAllBtn.onclick = async () => {
+                const content = await zip.generateAsync({type:"blob"});
+                saveAs(content, `圆形切割_${slices}等分.zip`);
+            };
+            container.parentNode.insertBefore(downloadAllBtn, container.nextSibling);
+        }
+    </script>
+
+<script>
+// 禁止右键菜单
+document.addEventListener('contextmenu', function(e) {
+    e.preventDefault();
+    return false;
+});
+
+// 禁止选择文本
+document.addEventListener('selectstart', function(e) {
+    e.preventDefault();
+    return false;
+});
+
+// 禁止拖拽
+document.addEventListener('dragstart', function(e) {
+    e.preventDefault();
+    return false;
+});
+
+// 禁止各种快捷键
+document.addEventListener('keydown', function(e) {
+    // 禁止F12开发者工具
+    if (e.keyCode === 123) {
+        e.preventDefault();
+        return false;
+    }
+    
+    // 禁止Ctrl+Shift+I (开发者工具)
+    if (e.ctrlKey && e.shiftKey && e.keyCode === 73) {
+        e.preventDefault();
+        return false;
+    }
+    
+    // 禁止Ctrl+Shift+C (检查元素)
+    if (e.ctrlKey && e.shiftKey && e.keyCode === 67) {
+        e.preventDefault();
+        return false;
+    }
+    
+    // 禁止Ctrl+Shift+J (控制台)
+    if (e.ctrlKey && e.shiftKey && e.keyCode === 74) {
+        e.preventDefault();
+        return false;
+    }
+    
+    // 禁止Ctrl+U (查看源代码)
+    if (e.ctrlKey && e.keyCode === 85) {
+        e.preventDefault();
+        return false;
+    }
+    
+    // 禁止Ctrl+A (全选)
+    if (e.ctrlKey && e.keyCode === 65) {
+        e.preventDefault();
+        return false;
+    }
+    
+    // 禁止Ctrl+C (复制)
+    if (e.ctrlKey && e.keyCode === 67) {
+        e.preventDefault();
+        return false;
+    }
+    
+    // 禁止Ctrl+V (粘贴)
+    if (e.ctrlKey && e.keyCode === 86) {
+        e.preventDefault();
+        return false;
+    }
+    
+    // 禁止Ctrl+X (剪切)
+    if (e.ctrlKey && e.keyCode === 88) {
+        e.preventDefault();
+        return false;
+    }
+    
+    // 禁止Ctrl+S (保存)
+    if (e.ctrlKey && e.keyCode === 83) {
+        e.preventDefault();
+        return false;
+    }
+    
+    // 禁止Ctrl+P (打印)
+    if (e.ctrlKey && e.keyCode === 80) {
+        e.preventDefault();
+        return false;
+    }
+});
+
+// 添加CSS样式禁止选择
+var style = document.createElement('style');
+style.innerHTML = `
+    body {
+        -webkit-user-select: none !important;
+        -moz-user-select: none !important;
+        -ms-user-select: none !important;
+        user-select: none !important;
+        -webkit-touch-callout: none !important;
+        -webkit-tap-highlight-color: transparent !important;
+    }
+    
+    * {
+        -webkit-user-select: none !important;
+        -moz-user-select: none !important;
+        -ms-user-select: none !important;
+        user-select: none !important;
+    }
+    
+    img {
+        -webkit-user-drag: none !important;
+        -khtml-user-drag: none !important;
+        -moz-user-drag: none !important;
+        -o-user-drag: none !important;
+        user-drag: none !important;
+        pointer-events: none !important;
+    }
+`;
+document.head.appendChild(style);
+
+// 禁止打印
+window.addEventListener('beforeprint', function(e) {
+    e.preventDefault();
+    return false;
+});
+
+// 监听粘贴事件
+document.addEventListener('paste', function(e) {
+    e.preventDefault();
+    return false;
+});
+
+// 清空控制台
+console.clear();
+
+// 禁用控制台
+// var originalLog = console.log;
+// console.log = function() {};
+// console.warn = function() {};
+// console.error = function() {};
+// console.info = function() {};
+// console.debug = function() {};
+
+// 反调试
+// (function() {
+//     var originalDevtools = window.console;
+//     Object.defineProperty(window, 'console', {
+//         get: function() {
+//             throw new Error('Console is disabled');
+//         },
+//         set: function() {
+//             throw new Error('Console is disabled');
+//         }
+//     });
+// })();
+</script>
+</body>
+</html>
