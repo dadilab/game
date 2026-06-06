@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HTML文件标题提取工具</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+            min-height: 100vh;
+            padding: 40px 20px;
+            color: #e0e0e0;
+        }
+        .container {
+            max-width: 960px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.06);
+            backdrop-filter: blur(20px);
+            border-radius: 24px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            overflow: hidden;
+        }
+        .header {
+            padding: 32px 40px 28px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            background: rgba(255, 255, 255, 0.03);
+        }
+        .header h1 {
+            font-size: 28px;
+            font-weight: 700;
+            background: linear-gradient(90deg, #a78bfa, #60a5fa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 6px;
+        }
+        .header p {
+            color: #94a3b8;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+        .controls {
+            padding: 24px 40px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            flex-wrap: wrap;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+        }
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 28px;
+            border: none;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #7c3aed, #6366f1);
+            color: #fff;
+            box-shadow: 0 4px 15px rgba(124, 58, 237, 0.35);
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(124, 58, 237, 0.45);
+        }
+        .btn-primary:active {
+            transform: translateY(0);
+        }
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.08);
+            color: #e0e0e0;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+        }
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.14);
+            transform: translateY(-2px);
+        }
+        .btn-secondary:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .btn-success {
+            background: linear-gradient(135deg, #059669, #10b981);
+            color: #fff;
+            box-shadow: 0 4px 15px rgba(5, 150, 105, 0.35);
+        }
+        .btn-success:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(5, 150, 105, 0.45);
+        }
+        .btn-success:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .btn-warning {
+            background: linear-gradient(135deg, #d97706, #f59e0b);
+            color: #fff;
+            box-shadow: 0 4px 15px rgba(217, 119, 6, 0.35);
+        }
+        .btn-warning:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(217, 119, 6, 0.45);
+        }
+        .btn-warning:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .file-input-wrap {
+            position: relative;
+        }
+        .file-input-wrap input[type="file"] {
+            position: absolute;
+            inset: 0;
+            opacity: 0;
+            cursor: pointer;
+            width: 100%;
+        }
+        .badge {
+            font-size: 13px;
+            padding: 6px 14px;
+            border-radius: 20px;
+            background: rgba(255, 255, 255, 0.06);
+            color: #94a3b8;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .badge .num {
+            color: #a78bfa;
+            font-weight: 700;
+        }
+        .progress-area {
+            padding: 0 40px 20px;
+        }
+        .progress-bar-wrap {
+            height: 6px;
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 3px;
+            overflow: hidden;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        .progress-bar-wrap.active {
+            opacity: 1;
+        }
+        .progress-bar {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #7c3aed, #6366f1, #60a5fa);
+            border-radius: 3px;
+            transition: width 0.3s ease;
+        }
+        .stats {
+            padding: 16px 40px 0;
+            display: none;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+        .stats.show {
+            display: flex;
+        }
+        .stat-item {
+            padding: 10px 18px;
+            background: rgba(255, 255, 255, 0.04);
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+        }
+        .stat-item .label {
+            font-size: 12px;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .stat-item .value {
+            font-size: 20px;
+            font-weight: 700;
+            color: #e0e0e0;
+            margin-top: 2px;
+        }
+        .stat-item .value.success {
+            color: #34d399;
+        }
+        .stat-item .value.warn {
+            color: #fbbf24;
+        }
+        .results {
+            padding: 20px 40px 32px;
+        }
+        .results-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+        }
+        .results-header h2 {
+            font-size: 16px;
+            font-weight: 600;
+            color: #c4b5fd;
+        }
+        .results-count {
+            font-size: 14px;
+            color: #64748b;
+        }
+
+        /* 表格样式 */
+        .result-table-wrap {
+            max-height: 600px;
+            overflow-y: auto;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .result-table-wrap::-webkit-scrollbar {
+            width: 6px;
+        }
+        .result-table-wrap::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.04);
+            border-radius: 3px;
+        }
+        .result-table-wrap::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.12);
+            border-radius: 3px;
+        }
+        .result-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+        .result-table thead {
+            position: sticky;
+            top: 0;
+            z-index: 2;
+        }
+        .result-table th {
+            background: rgba(124, 58, 237, 0.25);
+            color: #c4b5fd;
+            font-weight: 600;
+            text-align: left;
+            padding: 14px 18px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            white-space: nowrap;
+            backdrop-filter: blur(8px);
+        }
+        .result-table td {
+            padding: 12px 18px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+            color: #d1d5db;
+            vertical-align: middle;
+            word-break: break-all;
+        }
+        .result-table tbody tr {
+            transition: background 0.15s ease;
+            animation: fadeInUp 0.3s ease forwards;
+            opacity: 0;
+        }
+        .result-table tbody tr:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+        .result-table tbody tr:last-child td {
+            border-bottom: none;
+        }
+        .result-table .col-link a {
+            color: #60a5fa;
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.2s;
+        }
+        .result-table .col-link a:hover {
+            color: #93c5fd;
+            text-decoration: underline;
+        }
+        .result-table .col-title {
+            color: #a78bfa;
+            font-weight: 500;
+        }
+        .result-table .col-title .no-title {
+            color: #f87171;
+            font-style: italic;
+            font-weight: 400;
+        }
+        .result-table .col-tag {
+            font-family: 'Cascadia Code', 'Fira Code', 'JetBrains Mono', 'Consolas', monospace;
+            font-size: 13px;
+            color: #fbbf24;
+            background: rgba(251, 191, 36, 0.08);
+            padding: 3px 10px;
+            border-radius: 6px;
+            display: inline-block;
+            word-break: break-all;
+        }
+        .result-table .col-tag .tag-part {
+            color: #f472b6;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(8px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #64748b;
+        }
+        .empty-state .icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+            opacity: 0.5;
+        }
+        .empty-state p {
+            font-size: 15px;
+        }
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%) translateY(120px);
+            background: rgba(30, 30, 60, 0.95);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 14px 28px;
+            border-radius: 12px;
+            color: #e0e0e0;
+            font-size: 14px;
+            font-weight: 500;
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+            transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+            pointer-events: none;
+            z-index: 1000;
+        }
+        .toast.show {
+            transform: translateX(-50%) translateY(0);
+        }
+        .toast.success {
+            border-color: rgba(52, 211, 153, 0.3);
+        }
+        .toast.error {
+            border-color: rgba(248, 113, 113, 0.3);
+        }
+        @media (max-width: 640px) {
+            body {
+                padding: 16px 12px;
+            }
+            .header, .controls, .results, .stats, .progress-area {
+                padding-left: 20px;
+                padding-right: 20px;
+            }
+            .header h1 {
+                font-size: 22px;
+            }
+            .controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .btn {
+                justify-content: center;
+            }
+            .stats {
+                flex-direction: column;
+            }
+            .result-table th,
+            .result-table td {
+                padding: 10px 12px;
+                font-size: 13px;
+            }
+            .result-table .col-tag {
+                font-size: 12px;
+                padding: 2px 6px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>HTML 文件标题提取工具</h1>
+            <p>选择文件夹，自动递归扫描所有子目录中的 <code>.html</code> 文件，提取 <code>&lt;title&gt;</code> 标签并以表格展示</p>
+        </div>
+
+        <div class="controls">
+            <div class="file-input-wrap">
+                <button class="btn btn-primary" id="selectBtn">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                    选择文件夹
+                </button>
+                <input type="file" id="dirInput" webkitdirectory multiple accept=".html" />
+            </div>
+            <span class="badge" id="fileCount">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                已选 <span class="num" id="fileCountNum">0</span> 个 HTML 文件
+            </span>
+        </div>
+
+        <div class="progress-area">
+            <div class="progress-bar-wrap" id="progressWrap">
+                <div class="progress-bar" id="progressBar"></div>
+            </div>
+        </div>
+
+        <div class="stats" id="stats">
+            <div class="stat-item">
+                <div class="label">成功提取</div>
+                <div class="value success" id="successCount">0</div>
+            </div>
+            <div class="stat-item">
+                <div class="label">缺少标题</div>
+                <div class="value warn" id="warnCount">0</div>
+            </div>
+        </div>
+
+        <div class="results">
+            <div class="results-header">
+                <h2>提取结果</h2>
+                <span class="results-count" id="resultCount">共 0 项</span>
+            </div>
+            <div class="result-table-wrap" id="resultTableWrap">
+                <table class="result-table" id="resultTable">
+                    <thead>
+                        <tr>
+                            <th style="width:35%;">链接</th>
+                            <th style="width:25%;">标题</th>
+                            <th style="width:40%;">HTML 标签</th>
+                        </tr>
+                    </thead>
+                    <tbody id="resultBody">
+                    </tbody>
+                </table>
+                <div class="empty-state" id="emptyState">
+                    <div class="icon">📂</div>
+                    <p>点击上方「选择文件夹」按钮，选取包含 HTML 文件的目录</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+        (function() {
+            const dirInput = document.getElementById('dirInput');
+            const fileCountNum = document.getElementById('fileCountNum');
+            const resultBody = document.getElementById('resultBody');
+            const resultCount = document.getElementById('resultCount');
+            const emptyState = document.getElementById('emptyState');
+            const progressWrap = document.getElementById('progressWrap');
+            const progressBar = document.getElementById('progressBar');
+            const stats = document.getElementById('stats');
+            const successCountEl = document.getElementById('successCount');
+            const warnCountEl = document.getElementById('warnCount');
+
+            let results = [];
+            let blobUrls = [];
+
+            function revokeBlobUrls() {
+                blobUrls.forEach(url => URL.revokeObjectURL(url));
+                blobUrls = [];
+            }
+
+            function escapeHtml(str) {
+                const div = document.createElement('div');
+                div.textContent = str;
+                return div.innerHTML;
+            }
+
+            function extractTitle(html) {
+                const match = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
+                if (match && match[1]) {
+                    return match[1].trim();
+                }
+                return null;
+            }
+
+            function readFileAsText(file) {
+                return new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = () => resolve(reader.result);
+                    reader.onerror = () => reject(reader.error);
+                    reader.readAsText(file, 'UTF-8');
+                });
+            }
+
+            async function processFiles(files) {
+                const htmlFiles = [];
+                for (let i = 0; i < files.length; i++) {
+                    const file = files[i];
+                    if (file.name.toLowerCase().endsWith('.html')) {
+                        htmlFiles.push(file);
+                    }
+                }
+
+                if (htmlFiles.length === 0) {
+                    resultBody.innerHTML = '';
+                    emptyState.style.display = 'block';
+                    emptyState.innerHTML = '<div class="icon">🔍</div><p>所选文件夹中未找到 <code>.html</code> 文件</p>';
+                    resultCount.textContent = '共 0 项';
+                    return;
+                }
+
+                emptyState.style.display = 'none';
+                progressWrap.classList.add('active');
+                progressBar.style.width = '0%';
+
+                revokeBlobUrls();
+                results = [];
+                const total = htmlFiles.length;
+
+                for (let i = 0; i < total; i++) {
+                    const file = htmlFiles[i];
+                    const progress = ((i + 1) / total * 100).toFixed(1);
+                    progressBar.style.width = progress + '%';
+
+                    try {
+                        const content = await readFileAsText(file);
+                        const title = extractTitle(content);
+                        const blobUrl = URL.createObjectURL(file);
+                        blobUrls.push(blobUrl);
+                        results.push({
+                            fileName: file.name,
+                            path: file.webkitRelativePath,
+                            url: blobUrl,
+                            title: title,
+                            hasTitle: title !== null
+                        });
+                    } catch (err) {
+                        results.push({
+                            fileName: file.name,
+                            path: file.webkitRelativePath,
+                            url: null,
+                            title: '(读取失败: ' + err.message + ')',
+                            hasTitle: false,
+                            error: true
+                        });
+                    }
+                }
+
+                progressWrap.classList.remove('active');
+                renderResults();
+                updateStats();
+                showToast('扫描完成，共提取 ' + results.length + ' 个文件', 'success');
+            }
+
+            function renderResults() {
+                if (results.length === 0) {
+                    resultBody.innerHTML = '';
+                    emptyState.style.display = 'block';
+                    emptyState.innerHTML = '<div class="icon">🔍</div><p>未找到任何 HTML 文件</p>';
+                    resultCount.textContent = '共 0 项';
+                    return;
+                }
+
+                resultCount.textContent = '共 ' + results.length + ' 项';
+                resultBody.innerHTML = '';
+
+                // 按路径排序，保持子目录分组
+                const sorted = [...results].sort((a, b) => a.path.localeCompare(b.path));
+
+                sorted.forEach((item, index) => {
+                    const tr = document.createElement('tr');
+                    tr.style.animationDelay = (index * 20) + 'ms';
+
+                    // 链接（可点击）
+                    const tdLink = document.createElement('td');
+                    tdLink.className = 'col-link';
+                    if (item.url && item.hasTitle) {
+                        const a = document.createElement('a');
+                        a.href = item.url;
+                        a.target = '_blank';
+                        a.textContent = item.path;
+                        tdLink.appendChild(a);
+                    } else {
+                        tdLink.textContent = item.path;
+                        tdLink.style.color = item.error ? '#f87171' : '#64748b';
+                    }
+
+                    // 标题
+                    const tdTitle = document.createElement('td');
+                    tdTitle.className = 'col-title';
+                    if (item.hasTitle) {
+                        tdTitle.textContent = item.title;
+                    } else {
+                        tdTitle.className = 'col-title no-title';
+                        tdTitle.textContent = item.error ? item.title : '（缺少 <title> 标签）';
+                    }
+
+                    // HTML 标签（显示原始 <a> 代码）
+                    const tdTag = document.createElement('td');
+                    const tagSpan = document.createElement('span');
+                    tagSpan.className = 'col-tag';
+
+                    const displayTitle = item.hasTitle ? item.title : (item.error ? item.title : '标题');
+                    const displayHref = item.path;
+
+                    // 用 span 分色显示 HTML 标签的各部分
+                    const parts = [
+                        { text: '&lt;a ', cls: 'tag-part' },
+                        { text: 'href="', cls: '' },
+                        { text: escapeHtml(displayHref), cls: '' },
+                        { text: '" target="_blank"&gt;', cls: '' },
+                        { text: escapeHtml(displayTitle), cls: '' },
+                        { text: '&lt;/a&gt;', cls: 'tag-part' }
+                    ];
+                    tagSpan.innerHTML = parts.map(p =>
+                        p.cls ? '<span class="' + p.cls + '">' + p.text + '</span>' : p.text
+                    ).join('');
+                    tdTag.appendChild(tagSpan);
+
+                    tr.appendChild(tdLink);
+                    tr.appendChild(tdTitle);
+                    tr.appendChild(tdTag);
+                    resultBody.appendChild(tr);
+                });
+            }
+
+            function updateStats() {
+                const success = results.filter(r => r.hasTitle).length;
+                const warn = results.filter(r => !r.hasTitle).length;
+                successCountEl.textContent = success;
+                warnCountEl.textContent = warn;
+                stats.classList.add('show');
+            }
+
+            function showToast(msg, type) {
+                const el = document.getElementById('toast');
+                el.textContent = msg;
+                el.className = 'toast ' + type + ' show';
+                clearTimeout(el._timer);
+                el._timer = setTimeout(() => el.classList.remove('show'), 3000);
+            }
+
+            dirInput.addEventListener('change', function(e) {
+                const files = e.target.files;
+                if (!files || files.length === 0) return;
+
+                fileCountNum.textContent = files.length;
+                stats.classList.remove('show');
+                resultBody.innerHTML = '';
+                emptyState.style.display = 'block';
+                emptyState.innerHTML = '<div class="icon">⏳</div><p>正在扫描 HTML 文件...</p>';
+                resultCount.textContent = '共 0 项';
+
+                processFiles(files);
+            });
+
+            document.getElementById('selectBtn').addEventListener('click', function() {
+                dirInput.click();
+            });
+
+        })();
+    </script>
+</body>
+</html>
