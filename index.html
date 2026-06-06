@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>游戏项目导航</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            text-align: center;
+            color: white;
+            font-size: 2.5rem;
+            margin-bottom: 40px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .nav-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+        }
+        
+        .nav-item {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            text-decoration: none;
+            color: #333;
+            display: block;
+        }
+        
+        .nav-item:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+        }
+        
+        .nav-item h3 {
+            font-size: 1.1rem;
+            margin-bottom: 8px;
+            color: #2c3e50;
+        }
+        
+        .nav-item p {
+            font-size: 0.85rem;
+            color: #7f8c8d;
+            word-break: break-all;
+        }
+        
+        .no-title {
+            font-style: italic;
+            color: #95a5a6;
+        }
+        
+        .project-count {
+            text-align: center;
+            color: white;
+            margin-top: 30px;
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 1.8rem;
+            }
+            
+            .nav-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎮 游戏项目导航</h1>
+        
+        <div class="nav-grid">
+            <a href="2048/index.html" class="nav-item">
+                <h3>2048小游戏</h3>
+                <p>2048/index.html</p>
+            </a>
+            
+            <a href="3Dcube/index.html" class="nav-item">
+                <h3>三视图计数教学平台</h3>
+                <p>3Dcube/index.html</p>
+            </a>
+            
+            <a href="File-Name-Extractor/index.html" class="nav-item">
+                <h3>文件名提取器</h3>
+                <p>File-Name-Extractor/index.html</p>
+            </a>
+            
+            <a href="Image-segmentation/index.html" class="nav-item">
+                <h3>圆形切割器</h3>
+                <p>Image-segmentation/index.html</p>
+            </a>
+            
+            <a href="Timeline-of-chinese-history/index.html" class="nav-item">
+                <h3>华夏历史时间线</h3>
+                <p>Timeline-of-chinese-history/index.html</p>
+            </a>
+            
+            <a href="Triangle-demo/index.html" class="nav-item">
+                <h3 class="no-title">Triangle-demo</h3>
+                <p>Triangle-demo/index.html</p>
+            </a>
+            
+            <a href="airplanebattle/index.html" class="nav-item">
+                <h3>星际战机 - 太空射击游戏</h3>
+                <p>airplanebattle/index.html</p>
+            </a>
+            
+            <a href="bubble-sort-visualizer/index.html" class="nav-item">
+                <h3>冒泡排序可视化演示</h3>
+                <p>bubble-sort-visualizer/index.html</p>
+            </a>
+            
+            <a href="catch-the-cat/index.html" class="nav-item">
+                <h3>圈小猫</h3>
+                <p>catch-the-cat/index.html</p>
+            </a>
+            
+            <a href="class-time/index.html" class="nav-item">
+                <h3>课堂时钟</h3>
+                <p>class-time/index.html</p>
+            </a>
+            
+            <a href="colorcube/index.html" class="nav-item">
+                <h3>色差方块</h3>
+                <p>colorcube/index.html</p>
+            </a>
+            
+            <a href="fiveainrow/index.html" class="nav-item">
+                <h3>五子棋</h3>
+                <p>fiveainrow/index.html</p>
+            </a>
+            
+            <a href="gomoku/index.html" class="nav-item">
+                <h3>五子棋游戏</h3>
+                <p>gomoku/index.html</p>
+            </a>
+            
+            <a href="happy-class/index.html" class="nav-item">
+                <h3>快乐课堂点名系统</h3>
+                <p>happy-class/index.html</p>
+            </a>
+            
+            <a href="htmleditor/index.html" class="nav-item">
+                <h3>Html网页代码预览器</h3>
+                <p>htmleditor/index.html</p>
+            </a>
+            
+            <a href="lever-lab/index.html" class="nav-item">
+                <h3>杠杆原理互动实验室</h3>
+                <p>lever-lab/index.html</p>
+            </a>
+            
+            <a href="chinese-chess.html" class="nav-item">
+                <h3>中国象棋</h3>
+                <p>chinese-chess.html</p>
+            </a>
+            
+            <a href="color-select.html" class="nav-item">
+                <h3>颜色选择器</h3>
+                <p>color-select.html</p>
+            </a>
+            
+            <a href="wordmaster/index.html" class="nav-item">
+                <h3>WordMaster - 词汇记忆挑战</h3>
+                <p>wordmaster/index.html</p>
+            </a>
+            
+            <a href="video-cut-img/index.html" class="nav-item">
+                <h3>视频随身尾帧截图器</h3>
+                <p>video-cut-img/index.html</p>
+            </a>
+            
+            <a href="unit-converter/index.html" class="nav-item">
+                <h3>全能单位换算器</h3>
+                <p>unit-converter/index.html</p>
+            </a>
+            
+            <a href="todo-app/index.html" class="nav-item">
+                <h3>待办事项管理 | TaskFlow</h3>
+                <p>todo-app/index.html</p>
+            </a>
+            
+            <a href="ticiqi/index.html" class="nav-item">
+                <h3>许老师在线提词器</h3>
+                <p>ticiqi/index.html</p>
+            </a>
+            
+            <a href="teris/index.html" class="nav-item">
+                <h3>俄罗斯方块</h3>
+                <p>teris/index.html</p>
+            </a>
+            
+            <a href="snake/index.html" class="nav-item">
+                <h3>智能贪吃蛇对战</h3>
+                <p>snake/index.html</p>
+            </a>
+            
+            <a href="roll-call-in-class/index.html" class="nav-item">
+                <h3>快乐课堂点名系统</h3>
+                <p>roll-call-in-class/index.html</p>
+            </a>
+            
+            <a href="refraction-of-light/index.html" class="nav-item">
+                <h3>光的反射与折射定律交互式演示</h3>
+                <p>refraction-of-light/index.html</p>
+            </a>
+            
+            <a href="pythagorean-theorem/index.html" class="nav-item">
+                <h3>勾股定理互动演示</h3>
+                <p>pythagorean-theorem/index.html</p>
+            </a>
+            
+            <a href="piccompress/index.html" class="nav-item">
+                <h3>高效照片压缩工具</h3>
+                <p>piccompress/index.html</p>
+            </a>
+            
+            <a href="photocompressor/index.html" class="nav-item">
+                <h3>高效照片压缩工具</h3>
+                <p>photocompressor/index.html</p>
+            </a>
+            
+            <a href="magic-sudoku/index.html" class="nav-item">
+                <h3>杠杆原理互动实验室</h3>
+                <p>magic-sudoku/index.html</p>
+            </a>
+            
+            <a href="minitomato/index.html" class="nav-item">
+                <h3>极简番茄计时器</h3>
+                <p>minitomato/index.html</p>
+            </a>
+            
+            <a href="lottery/index.html" class="nav-item">
+                <h3>幸运抽奖 | 智能抽奖系统</h3>
+                <p>lottery/index.html</p>
+            </a>
+        </div>
+        
+        <div class="project-count">
+            共收录 <strong>33</strong> 个项目
+        </div>
+    </div>
+</body>
+</html>
